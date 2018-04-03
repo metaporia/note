@@ -25,6 +25,12 @@ dependencies:
 
 library:
   source-dirs: src
+  exposed-modules:
+      - CMap
+      - Lib
+  other-modules:
+      - Select
+
 
 executables:
   note-exe:
@@ -47,3 +53,4 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - note
+    - QuickCheck
