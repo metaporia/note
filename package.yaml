@@ -24,8 +24,15 @@ dependencies:
 - containers
 
 library:
-  source-dirs: src
-
+  source-dirs: 
+      - src
+      - src/blobmap
+  exposed-modules:
+      - Lib
+      - ContentMap
+  other-modules:
+      - Content
+      - Handle
 executables:
   note-exe:
     main:                Main.hs
@@ -47,3 +54,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - note
+    - QuickCheck
+    - checkers

@@ -1,6 +1,6 @@
 !_TAG_FILE_FORMAT	2
 !_TAG_FILE_SORTED	1
-!_TAG_FILE_CODEX	47e3e4e857361877a287a41d227c848f
+!_TAG_FILE_CODEX	dd514dcf96d67c9252f21c02bcae4a55
 !	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Arr.hs	496
 !	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntMap/Base.hs	296
 !	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Base.hs	316
@@ -20,7 +20,7 @@ $>	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/F
 &	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Function.hs	99
 &&	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Classes.hs	424
 &&&	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Arrow.hs	120
-(	./src/Lib.hs	46
+(	./src/Lib.hs	20
 (	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Category.hs	63
 (	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Monad.hs	113
 (	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Foldable.hs	595
@@ -292,7 +292,6 @@ ArrowZero	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 AssertionFailed	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	123
 Associativity	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	971
 AsyncException	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	154
-B	./src/Lib.hs	50
 BA	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Float/ConversionUtils.hs	78
 BCO#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3146
 BN#	/home/aporia/.stack/indices/Hackage/packages/integer-gmp/1.0.0.1/integer-gmp-1.0.0.1/src/GHC/Integer/Type.hs	130
@@ -308,9 +307,8 @@ Bin	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0
 Bin	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Set/Base.hs	240
 BitMap	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntSet/Base.hs	248
 Bits	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Bits.hs	85
-Blob	./src/Lib.hs	11
-BlobId	./src/Lib.hs	12
-BlobMap	./src/Lib.hs	17
+Blob	./src/blobmap/Content.hs	7
+BlobId	./src/blobmap/Handle.hs	6
 BlockBuffering	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Types.hs	245
 BlockReason	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	530
 BlockedIndefinitelyOnMVar	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	65
@@ -423,6 +421,10 @@ Constr	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Da
 ConstrRep	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Data.hs	532
 Constraint	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Types.hs	58
 Constructor	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	939
+Content	./src/blobmap/Content.hs	7
+ContentErr	./src/blobmap/ContentMap.hs	50
+ContentError	./src/blobmap/Content.hs	10
+ContentMap	./src/blobmap/ContentMap.hs	15
 Control	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Control.hs	62
 Control	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Unicode.hs	127
 Control.Applicative	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Applicative.hs	37
@@ -559,6 +561,7 @@ DelayReq	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/
 DelaySTM	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Windows.hs	154
 DemoteRep	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1143
 Denormal	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exception.hs	235
+DerefError	./src/blobmap/ContentMap.hs	50
 DeviceID	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/System/Posix/Types.hs	176
 Digit	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	678
 Digit12	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	340
@@ -883,6 +886,7 @@ GroupID	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/S
 HANDLE	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Windows.hs	90
 HANDLE	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/System/CPUTime.hsc	143
 HPrintfType	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/Printf.hs	278
+Handle	./src/blobmap/Handle.hs	6
 Handle	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Types.hs	98
 HandleFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Internals.hs	89
 HandlePosition	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle.hs	330
@@ -928,12 +932,10 @@ IOMode	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GH
 IORef	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IORef.hs	33
 IP	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Classes.hs	74
 IT	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/IntTable.hs	35
-Id	./src/Lib.hs	10
+Id	./src/blobmap/ContentMap.hs	13
 Id	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Traversable.hs	325
-IdList	./src/Lib.hs	13
-IdList	./src/Lib.hs	50
-IdListId	./src/Lib.hs	14
-IdListId	./src/Lib.hs	51
+IdList	./src/blobmap/Content.hs	7
+IdListId	./src/blobmap/Handle.hs	6
 Ident	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/Read/Lex.hs	67
 Identity	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Functor/Identity.hs	52
 Identity	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	835
@@ -986,7 +988,9 @@ Integral	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/
 Interrupted	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	296
 InvalidArgument	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	290
 InvalidSequence	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/Types.hs	128
+IsBlob	./src/blobmap/Content.hs	11
 IsChar	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/Printf.hs	386
+IsIdList	./src/blobmap/Content.hs	10
 IsLabel	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/OverloadedLabels.hs	47
 IsList	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exts.hs	163
 IsStatic	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/StaticPtr.hs	85
@@ -1147,6 +1151,7 @@ NoSourceStrictness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/bas
 NoSourceUnpackedness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	987
 NoSpecConstr	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exts.hs	149
 NoSuchThing	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	278
+NoValueAssocWithKey	./src/blobmap/ContentMap.hs	50
 Node	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	755
 Node	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Tree.hs	61
 Node2	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	756
@@ -1169,6 +1174,8 @@ Number	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Te
 Numeric	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Numeric.hs	19
 Numeric.Natural	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Numeric/Natural.hs	20
 Obj	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Dynamic.hs	82
+OfBlob	./src/blobmap/Handle.hs	8
+OfIdList	./src/blobmap/Handle.hs	10
 One	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	679
 One12	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	340
 OneLineGCStats	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/RTS/Flags.hsc	73
@@ -1356,6 +1363,7 @@ STret	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC
 STrue	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1160
 SeekFromEnd	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Device.hs	167
 SeekMode	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Device.hs	163
+Selection	./src/blobmap/ContentMap.hs	29
 Selector	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1032
 SemiClosedHandle	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Types.hs	151
 Semigroup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Semigroup.hs	89
@@ -1402,6 +1410,7 @@ SourceUnpack	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.
 SourceUnpackedness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	987
 Space	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Unicode.hs	124
 SpacingCombiningMark	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Unicode.hs	108
+Spec	./test/Spec.hs	1
 SpecConstrAnnotation	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exts.hs	149
 Split	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	1753
 SrcLoc	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ExecutionStack/Internal.hsc	47
@@ -1473,11 +1482,9 @@ TextDecoder	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1
 TextEncoder	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/Types.hs	100
 TextEncoding	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/Types.hs	107
 Thin	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	333
-Thread	./src/Lib.hs	50
 ThreadBlocked	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	557
 ThreadDied	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	559
 ThreadFinished	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	555
-ThreadHandle	./src/Lib.hs	51
 ThreadId	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	128
 ThreadId#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3034
 ThreadKilled	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Exception.hs	169
@@ -2048,9 +2055,9 @@ available	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 available	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Poll.hsc	45
 b	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Semigroup.hs	126
 b	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1172
-b0	./src/Lib.hs	42
-b1	./src/Lib.hs	43
-b2	./src/Lib.hs	44
+b0	./src/Lib.hs	16
+b1	./src/Lib.hs	17
+b2	./src/Lib.hs	18
 bSearch	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/CodePage/API.hs	332
 backend	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Internal.hs	165
 backend	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Internal.hs	171
@@ -2802,6 +2809,8 @@ constring	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 contains	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Graph.hs	319
 contains	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Graph.hs	320
 contains	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Graph.hs	348
+contentToDerefError	./src/blobmap/ContentMap.hs	52
+contentToDerefError	./src/blobmap/ContentMap.hs	53
 controlEventFd	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Control.hs	66
 controlReadFd	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Control.hs	63
 controlWriteFd	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Control.hs	64
@@ -3119,6 +3128,8 @@ delta	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers
 delta	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Set/Base.hs	1360
 denominator	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	114
 denominator	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	99
+derefHandle	./src/blobmap/ContentMap.hs	37
+derefHandle	./src/blobmap/ContentMap.hs	39
 descrSelector	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/RTS/Flags.hsc	245
 devType	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Device.hs	112
 devType	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/FD.hs	367
@@ -3518,8 +3529,8 @@ emState	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/G
 emTimeouts	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/TimerManager.hs	90
 emUniqueSource	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Manager.hs	130
 emUniqueSource	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/TimerManager.hs	92
-empty	./src/Lib.hs	19
-empty	./src/Lib.hs	20
+empty	./src/blobmap/ContentMap.hs	58
+empty	./src/blobmap/ContentMap.hs	59
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Base.hs	688
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Array.hs	62
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Array.hs	63
@@ -4476,6 +4487,8 @@ fromAscListWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7
 fromAscListWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Base.hs	2187
 fromAscListWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Strict.hs	1165
 fromAscListWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Strict.hs	1166
+fromBlob	./src/blobmap/Content.hs	13
+fromBlob	./src/blobmap/Content.hs	14
 fromBool	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Foreign/Marshal/Utils.hs	101
 fromBool	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Foreign/Marshal/Utils.hs	102
 fromCallSiteList	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Stack/Types.hs	156
@@ -4512,8 +4525,12 @@ fromEvent	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 fromEvent	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Poll.hsc	177
 fromException	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exception.hs	146
 fromException	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Exception.hs	149
+fromFile	./src/blobmap/Content.hs	21
+fromFile	./src/blobmap/Content.hs	22
 fromFunction	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	1664
 fromFunction	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Sequence.hs	1665
+fromIdList	./src/blobmap/Content.hs	17
+fromIdList	./src/blobmap/Content.hs	18
 fromInteger	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Num.hs	51
 fromIntegral	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	431
 fromIntegral	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	432
@@ -5186,7 +5203,7 @@ id2TSO	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GH
 id2TSO	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Sync.hs	156
 idLength	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/List.hs	141
 idLength	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/List.hs	142
-idList	./src/Lib.hs	48
+idList	./src/Lib.hs	22
 ident	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/KQueue.hsc	130
 idleGCDelayTime	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/RTS/Flags.hsc	118
 if	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Array.hs	48
@@ -5650,6 +5667,10 @@ initForeignEncoding	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/ba
 initForeignEncoding	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding.hs	157
 initLocaleEncoding	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding.hs	142
 initLocaleEncoding	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding.hs	155
+initWith	./src/blobmap/ContentMap.hs	55
+initWith	./src/blobmap/ContentMap.hs	56
+initWithFile	./src/blobmap/ContentMap.hs	26
+initWithFile	./src/blobmap/ContentMap.hs	27
 initialStkSize	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/RTS/Flags.hsc	99
 inits	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	253
 inits	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	254
@@ -5698,6 +5719,8 @@ insWithKey'	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/cont
 insWithKey'	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/IntMap.hs	71
 insWithKey'	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/Map.hs	98
 insWithKey'	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/Map.hs	99
+insert	./src/blobmap/ContentMap.hs	61
+insert	./src/blobmap/ContentMap.hs	62
 insert	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	264
 insert	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	265
 insert	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	551
@@ -5718,14 +5741,12 @@ insert	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/container
 insert	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Set/Base.hs	490
 insertBM	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntSet/Base.hs	448
 insertBM	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntSet/Base.hs	449
-insertBlob	./src/Lib.hs	22
-insertBlob	./src/Lib.hs	23
-insertBlobs	./src/Lib.hs	38
-insertBlobs	./src/Lib.hs	39
 insertBy	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	555
 insertBy	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	556
 insertCFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ForeignPtr.hs	327
 insertCFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ForeignPtr.hs	329
+insertContents	./src/blobmap/ContentMap.hs	71
+insertContents	./src/blobmap/ContentMap.hs	72
 insertDelay	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Windows.hs	192
 insertDelay	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Conc/Windows.hs	193
 insertDoubleX2#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3968
@@ -5843,7 +5864,8 @@ installHandler	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.
 installSignalHandlers	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/RTS/Flags.hsc	137
 install_interrupt_handler	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/TopHandler.hs	70
 install_interrupt_handler	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/TopHandler.hs	72
-instance	./src/Lib.hs	29
+instance	./src/blobmap/Handle.hs	12
+instance	./test/Spec.hs	14
 instance	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Applicative.hs	69
 instance	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Arrow.hs	142
 instance	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Control/Category.hs	49
@@ -6729,6 +6751,8 @@ look	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text
 look	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/ParserCombinators/ReadP.hs	211
 look	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/ParserCombinators/ReadPrec.hs	136
 look	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/ParserCombinators/ReadPrec.hs	139
+lookup	./src/blobmap/ContentMap.hs	68
+lookup	./src/blobmap/ContentMap.hs	69
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/IntTable.hs	47
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/IntTable.hs	48
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/PSQ.hs	127
@@ -6743,8 +6767,6 @@ lookup	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/container
 lookup	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/IntMap.hs	56
 lookup	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/Map.hs	80
 lookup	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/benchmarks/Map.hs	81
-lookupBlobId	./src/Lib.hs	25
-lookupBlobId	./src/Lib.hs	26
 lookupCompact	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/CodePage.hs	160
 lookupCompact	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/CodePage.hs	161
 lookupConv	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Encoding/CodePage.hs	156
@@ -6897,8 +6919,8 @@ magnitude	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 main	./Setup.hs	2
 main	./app/Main.hs	5
 main	./app/Main.hs	6
-main	./test/Spec.hs	1
-main	./test/Spec.hs	2
+main	./test/Spec.hs	10
+main	./test/Spec.hs	9
 main	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Setup.hs	5
 main	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Setup.hs	6
 main	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Setup.hs	5
@@ -10525,6 +10547,8 @@ selDecidedStrictness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/b
 selName	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1034
 selSourceStrictness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1038
 selSourceUnpackedness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1036
+select	./src/blobmap/ContentMap.hs	30
+select	./src/blobmap/ContentMap.hs	35
 select	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	492
 select	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	493
 sendDie	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Control.hs	189
@@ -10967,8 +10991,8 @@ some	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/
 some	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Base.hs	694
 some1	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	268
 some1	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/List/NonEmpty.hs	269
-someFunc	./src/Lib.hs	7
-someFunc	./src/Lib.hs	8
+someFunc	./src/Lib.hs	12
+someFunc	./src/Lib.hs	13
 someNatVal	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/TypeLits.hs	107
 someNatVal	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/TypeLits.hs	108
 someSymbolVal	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/TypeLits.hs	115
@@ -11335,6 +11359,7 @@ tell	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/
 tell	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Device.hs	86
 tell	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/FD.hs	353
 tell	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/FD.hs	354
+test	./test/Spec.hs	21
 testBit	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Bits.hs	184
 testBitBigNat	/home/aporia/.stack/indices/Hackage/packages/integer-gmp/1.0.0.1/integer-gmp-1.0.0.1/src/GHC/Integer/Type.hs	1037
 testBitBigNat	/home/aporia/.stack/indices/Hackage/packages/integer-gmp/1.0.0.1/integer-gmp-1.0.0.1/src/GHC/Integer/Type.hs	1038
@@ -12168,6 +12193,7 @@ traverseWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/
 traverseWithKey	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Base.hs	1708
 traverse_	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Foldable.hs	475
 traverse_	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Foldable.hs	476
+triggerHandle	./test/Spec.hs	19
 trim	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Base.hs	2259
 trim	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Map/Base.hs	2260
 trim	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Set/Base.hs	1044
