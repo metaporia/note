@@ -7,32 +7,84 @@ import Prelude hiding (insert, lookup)
 import Data.Maybe (fromJust)
 import Data.Monoid (Monoid, (<>))
 
-blobMap = M.empty :: M.Map (BlobId id) (Blob c)
+--blobMap = M.empty :: M.Map (BlobId id) (Blob c)
 
-newtype BlobId id = BlobId id deriving (Eq, Ord, Show)
+newtype BlobId id = BlobId id deriving (Eq, Ord)
+
+instance Show id => Show (BlobId id) where
+    show (BlobId b) = 'b': show b
+
+instance Functor BlobId where
+    fmap f (BlobId id) = BlobId (f id)
+
+instance Applicative BlobId where
+    pure = BlobId
+    BlobId f <*> BlobId a = BlobId (f a)
+
+instance Monad BlobId where
+    return = pure
+    BlobId a >>= f = f a
+
+class Unwrap f where
+    unwrap :: f a -> a
+
+instance Unwrap BlobId where
+    unwrap (BlobId id) = id
+
 
 newtype Blob c = Blob c deriving (Eq, Show)
 
+--idListMap = M.empty :: M.Map (IdListId id) (IdList id)
 
-idListMap = M.empty :: M.Map (IdListId id) (IdList id)
+newtype IdListId id = IdListId id deriving (Eq, Ord)
 
-newtype IdListId id = IdListId id deriving (Eq, Ord, Show)
+instance Show id => Show (IdListId id) where
+    show (IdListId id) = 'l':show id
 
-newtype IdList id = IdList [BlobId id] deriving (Eq, Show)
+newtype IdList id = IdList [BlobId id] deriving (Eq)
 
-data Handle id =  OfBlob (BlobId id) | OfIdList (IdListId id) deriving (Eq, Ord, Show)
-data Content c id = ABlob (Blob c) | AnIdList (IdList id) deriving (Eq, Show)
+instance Show id => Show (IdList id) where
+    show (IdList ids) = show ids
+
+data Handle id =  OfBlob (BlobId id) 
+               | OfIdList (IdListId id)
+               deriving (Eq, Ord)
+
+instance Show id => Show (Handle id) where
+    show (OfBlob id) = show id
+    show (OfIdList id) = show id
+
+data Content c id = ABlob (Blob c) 
+                  | AnIdList (IdList id)
+                  deriving (Eq)
+
+instance (Show c, Show id) => Show (Content c id) where
+    show (ABlob (Blob b)) = show b
+    show (AnIdList (IdList ids)) = show ids
 
 type Id = Int
 
 data CMap c id = CMap { cmap :: (M.Map (Handle id) (Content c id)) 
                       , nextId :: id} deriving (Eq, Show)
+
+--instance (Show id, Show c) => Show (CMap c id) where
 empty :: Num id => CMap c id
 empty = CMap M.empty 0
 
+insertKV :: (Num id, Ord id)
+          => Handle id 
+          -> Content c id 
+          -> CMap c id 
+          -> CMap c id
+insertKV handle content cMap =
+       CMap (M.insert handle content (cmap cMap)) 
+                        (nextId cMap)
+     
+
 insert :: (Num id, Ord id) 
        => Content c id -> CMap c id -> (CMap c id, Handle id)
-insert val map = (CMap (M.insert currentId val (cmap map)) (nextId map + 1), currentId)
+insert val map = 
+    (CMap (M.insert currentId val (cmap map)) (nextId map + 1), currentId)
     where 
         currentId = wrap $ nextId map
         wrap = case val of
@@ -56,7 +108,8 @@ derefIdListId :: forall id c.(Ord id, Num id, Monoid c)
               => IdListId id -> CMap c id -> Maybe c 
 derefIdListId id map' = 
     lookup handle map' >>= idsFromContent >>= 
-        fmap mconcat . sequence . (\ids -> map (\id -> derefBlobId  id map') ids)
+        fmap mconcat . sequence . (\ids -> 
+            map (\id -> derefBlobId  id map') ids)
         where handle :: Handle id
               handle = OfIdList id
 
@@ -64,7 +117,8 @@ deref :: (Num id, Ord id, Monoid c) => Handle id -> CMap c id -> Maybe c
 deref (OfBlob bid) = derefBlobId bid
 deref (OfIdList ids) = derefIdListId ids
 
-initWithFile :: (Num id, Ord id) => FilePath -> IO (CMap String id, Handle id)
+initWithFile :: (Num id, Ord id)
+             => FilePath -> IO (CMap String id, Handle id)
 initWithFile fp = readFile fp >>= return . initWith
 
 initWith :: (Ord id, Num id) => c -> (CMap c id, Handle id)
@@ -120,5 +174,6 @@ n = m :: M.Map (Handle Id) (Content String Id)
 n' = M.insert (OfBlob b0_id) (ABlob b0) n -- check
 n'' = M.insert (OfIdList (IdListId 0)) (AnIdList (IdList [b0_id])) n'
 
---l = insert (OfIdList (IdListId 0)) (AnIdList (IdList (IdListId 0))) -- prevented!
+--l = insert (OfIdList (IdListId 0)) (AnIdList (IdList (IdListId 0))) 
+-- prevented!
 
