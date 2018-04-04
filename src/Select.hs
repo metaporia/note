@@ -38,17 +38,42 @@ splitBlob :: BlobId Id
 --   global thread context, then splitBlob will fail.
 splitBlob bid@(BlobId id) selection cMap = 
     ins >>= (\(m', bids) -> 
-        replace bid bids m') >>= (\m'' -> return (m'', handle))
+        replace bid bids m') >>= (\m'' -> 
+            selHandle >>= (\handle -> return (m'', handle)))
     where s = derefBlobId bid cMap
           --ins :: Maybe (CMap String id, [BlobId id])
-          handle = toIdListHandle id --rets whole idlist
-          handle' = undefined
+          --TODO: make vvv less fragile (what about toIdListHandle case?)
+          selHandle = OfBlob <$> selHandle'
+          selHandle' = (ins >>= return . (\(_, bids) -> bids !! handleIdx))
+          handleIdx :: Int
+          handleIdx = case (selPosn <$> parts) of
+                      Just idx -> 
+                          case idx of
+                                Just i -> i
+                                Nothing -> 
+                                    error "no sel handle idx (inner)"
+                      Nothing -> error "no sel handle idx"
   -- TODO: return the correct handle, that of the selection
           ins = parts >>= (\parts -> insertCs parts cMap)
           parts :: Maybe [String]
           parts = (filter isNotEmpty) <$> mPreSelPost
           mPreSelPost :: Maybe [String]
           mPreSelPost = fmap ( toList . (\s -> sel s selection)) s
+
+-- since a Selection of one blob only ever produces, at a maximum, three 
+-- sub-strings, detecting where the empty string(s) are placed should 
+-- suffice to calculate the index of the selection handle after the 
+-- removal of empty lists ([]).
+selPosn :: Eq a => [[a]] -> Maybe Int
+selPosn [] = Nothing
+selPosn [x] = Nothing
+selPosn [x,y] = Nothing
+selPosn [x,y,z]
+  | isNotEmpty x && isNotEmpty y = Just 1
+  | x == [] && isNotEmpty y = Just 0
+  | isNotEmpty x = Just 0
+  | x == [] && y == [] && isNotEmpty z = Just 0
+  | otherwise = Nothing
 
 -- Nothing case represents the presence if non-BlobIds in list
 insertCs :: forall c id. (Ord id, Num id)
