@@ -1,12 +1,23 @@
+{-|
+Module : Select
+Description : Interface for arbitrary reference/referent selection.
+
+Further commentary, (with *bold*, and _italics_?)
+-}
 --{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Select where
 
-import CMap
+import CMap ( CMap(CMap, cmap, nextId), initWith
+            , insert, deref, derefIdListId, insertKV, toIdListHandle
+            , toIdList, toBlobHandle, empty, lookup
+            , derefBlobId, toBlob
+             )
 import Data.List (splitAt)
 import Prelude hiding (lookup, insert)
 import Data.Maybe (fromJust)
 import qualified Data.Map as M
+import Control.Monad (join)
 
 import Blob
 import BlobId
@@ -17,15 +28,103 @@ import Content
 
 import Helpers
 
+-- | Returns a tuple of, in order, the updated 'CMap' and the 'Handle id' of
+-- the requested selection.
+
+select :: forall id. (Ord id, Num id)
+       => Handle id -> Selection -> CMap String id -> (CMap String id, Handle id)
+select (OfBlob bid) = undefined 
+select (OfIdList lid) = undefined 
+
+splitIdList :: forall id. (Ord id, Num id)
+            => Handle id
+            -> Selection
+            -> CMap String id
+            -> (CMap String id, Handle id)
+splitIdList = undefined
+
+genSels :: forall id. (Ord id, Num id)
+        => IdList id
+        -> Selection
+        -> CMap String id
+        -> [(BlobId id, Maybe Selection)]
+genSels idList sel cMap = (\(x,_,_) -> x) (foldr update base ids)
+    where 
+        ids = toBIds idList
+        base = ([], Just sel, Just 0)
+        update :: BlobId id 
+               -> ([(BlobId id, Maybe Selection)], Maybe Selection, Maybe Int)
+               -> ([(BlobId id, Maybe Selection)], Maybe Selection, Maybe Int)
+        update bid (retTups, currSel, lastsbG) = 
+                let bidLen = length <$> derefBlobId bid cMap :: Maybe Int
+                    nextSel = join $ (\l -> (updateSel l) <$> currSel) <$> sbG
+                    sbG = bidLen >>= (\bidL -> (bidL+) <$> lastsbG)
+                    curTup = (bid, currSel)
+                 in (curTup:retTups, nextSel, sbG)
+
+b = "This is the first line.\n"
+b1 = "This is the second line.\n"
+b2 = "This is the third line.\n"
+bs = b ++ b1 ++ b2
+
+
+testSel = Sel 10 25
+ids = fromJust $ handleToIdListId handle
+test' = genSels idList  testSel m'' ---success! with that solitary test case :(
+fetched = map derefFrom test'
+    where derefFrom (bid, mSel) = (derefBlobId bid m'', mSel)
+
+fetched' = foldr derefFrom ([], m'') test'
+
+derefFrom (id, mSel) (ret, map) = (ret', map')
+    where 
+      (map', handle) = fromJust $ mSel >>= (\s-> splitBlob id s map)
+      ret' = (id, handle):ret
+
+ma = snd fetched'
+ltup = fst fetched'
+
+to :: String -> Handle Id
+to s = read s :: Handle Id
+
+idList = (IdList bids)
+(m', bids) = fromJust $ insertCs [b,b1,b2] empty'
+(m'', handle) = insert (AnIdList idList) m'
+
+-- given handle, and m''
+-- TODO
+-- □ fix fetched' so that, e.g., 
+--   a) l0 -> [b4,b5] and not [b5,b4], and 
+--   b) (b0 = l0) -> [b4, b5]. currently b0 has been removed, but not replaced.
+
+
+
 data Selection = Sel { sIdx :: Int
                      , eIdx :: Int
                      } deriving (Eq, Show)
 
+data Selection' = Sel' { sIdx' :: Idx, eIdx' :: Idx } deriving (Eq, Show)
 
-(pre, sel', post) = 
-    (take (sIdx s) b, take (selLen) rest, drop (sIdx s + selLen) b)
-    where rest = drop (sIdx s) b
-          selLen = eIdx s - (sIdx s)
+data Idx = Start | Idx Int | End deriving (Eq, Show)
+
+liftSel' :: (Int -> Int) -> Selection' -> Selection'
+liftSel' f (Sel' (Idx s) (Idx e)) = Sel' (Idx $ f s) (Idx $ f e)
+liftSel' f (Sel' Start (Idx e)) = Sel' Start (Idx $ f e)
+liftSel' f (Sel' (Idx s) End) = Sel' (Idx $ f s) End
+
+updateSel' :: Int -> Selection' -> Selection'
+updateSel' idx = liftSel' ((-)idx) 
+
+sel' :: String -> Selection' -> (String, String, String)
+sel' s (Sel' Start End) = ("", s, "")
+sel' s (Sel' Start (Idx e)) = ("", sel, post)
+    where (sel, post) = splitAt e s
+sel' s (Sel' (Idx idx) End) = (pre, sel, "")
+    where (pre, sel) = splitAt idx s
+sel' s' (Sel' (Idx s) (Idx e)) = (pre, sel, post)
+    where (pre, rest) = splitAt s b
+          (sel, post) = splitAt selLen rest
+          selLen = e - s
 
 sel :: String -> Selection -> (String, String, String)
 sel b (Sel s e) = (pre, sel, post)
@@ -33,11 +132,17 @@ sel b (Sel s e) = (pre, sel, post)
           (sel, post) = splitAt selLen rest
           selLen = e - s
 
+updateSel :: Int -> Selection -> Selection
+updateSel idx (Sel s e) = Sel (subBy s idx) (subBy e idx)
+
+subBy idx shift = if diff >= 0 then diff else 0
+    where diff = idx - shift
+
 -- returns the handle of the selection
-splitBlob :: BlobId Id
+splitBlob :: (Ord id, Num id) => BlobId id
           -> Selection 
-          -> CMap String Id
-          -> Maybe (CMap String Id, Handle Id)
+          -> CMap String id
+          -> Maybe (CMap String id, Handle id)
 -- | NB: the `selection` param represets starting and ending indices of the
 --       derefed `Blob` reffed by `bid` *relative to bid's String`*!!
 --       E.g., if bid points to "
@@ -87,11 +192,9 @@ insertCs cs cMap = case sequence . snd $ tup of
                      Just bids -> Just (fst tup, bids)
                      Nothing -> Nothing
     where tup :: (CMap c id, [Maybe (BlobId id)])
-          tup = foldr  (\c (m, bids) -> 
+          tup = foldl  (\(m, bids) c -> 
               let (m', handle) = (insert (toBlob c) m) 
                in (m', handleToBlobId handle : bids)) (cMap, []) cs
-
-empty' = empty :: CMap String Id
 
 -- | Deletes entry of bid, inserts the equivalent IdListId handle (using the 
 -- same id #), and returns the modified map.
@@ -110,14 +213,15 @@ replace (BlobId id) bids cMap =
           idList = toIdList . unwrap $ (sequence bids)
           handle = toBlobHandle id
 
-isNotEmpty :: [a] -> Bool
-isNotEmpty [] = False
-isNotEmpty _ = True
 
-toList :: (a, a, a) -> [a]
-toList (x, y, z) = x: y: z :[]
+--(pre, sel', post) = 
+--    (take (sIdx s) b, take (selLen) rest, drop (sIdx s + selLen) b)
+--    where rest = drop (sIdx s) b
+--          selLen = eIdx s - (sIdx s)
+--
+empty' = empty :: CMap String Id
 
-b = "hello world"
+b' = "hello world"
 --   01234567890
 s = Sel 0 11
 (k, i) = initWith b

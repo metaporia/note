@@ -55,7 +55,10 @@ executables:
 tests:
   note-test:
     main:                Spec.hs
-    source-dirs:         test
+    source-dirs:         
+    - test
+    - src
+    - src/cmap
     ghc-options:
     - -threaded
     - -rtsopts

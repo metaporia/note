@@ -19,26 +19,15 @@ import Helpers
 import Content
 import Handle
 
---blobMap = M.empty :: M.Map (BlobId id) (Blob c)
-
-
-
---idListMap = M.empty :: M.Map (IdListId id) (IdList id)
-
-
-
-type Id = Int
-
-data CMap c id = CMap { cmap :: (M.Map (Handle id) (Content c id)) 
+data CMap c id = CMap { cmap :: (M.Map (Handle id) (Content id c)) 
                       , nextId :: id} deriving (Eq, Show)
 
---instance (Show id, Show c) => Show (CMap c id) where
 empty :: Num id => CMap c id
 empty = CMap M.empty 0
 
 insertKV :: (Num id, Ord id)
           => Handle id 
-          -> Content c id 
+          -> Content id c 
           -> CMap c id 
           -> CMap c id
 insertKV handle content cMap =
@@ -47,7 +36,7 @@ insertKV handle content cMap =
      
 
 insert :: (Num id, Ord id) 
-       => Content c id -> CMap c id -> (CMap c id, Handle id)
+       => Content id c -> CMap c id -> (CMap c id, Handle id)
 insert val map = 
     (CMap (M.insert currentId val (cmap map)) (nextId map + 1), currentId)
     where 
@@ -57,7 +46,7 @@ insert val map =
                    AnIdList _ -> (\id -> OfIdList (IdListId id))
 
 lookup :: (Num id, Ord id)
-       => Handle id -> CMap c id -> Maybe (Content c id)
+       => Handle id -> CMap c id -> Maybe (Content id c)
 lookup handle cMap = M.lookup handle map
     where map = cmap cMap
 
@@ -89,21 +78,21 @@ initWithFile fp = readFile fp >>= return . initWith
 initWith :: (Ord id, Num id) => c -> (CMap c id, Handle id)
 initWith c = insert (toBlob c) empty
 
-blobFromContent :: Content c id -> Maybe c
+blobFromContent :: Content id c -> Maybe c
 blobFromContent (ABlob (Blob c)) = Just c
 blobFromContent _ = Nothing
 
-idsFromContent :: Content c id -> Maybe [BlobId id]
+idsFromContent :: Content id c -> Maybe [BlobId id]
 idsFromContent (AnIdList (IdList ids)) = Just ids
 idsFromContent _ = Nothing
 
 
 -- beware of cruft below
 
-toBlob :: c -> Content c id
+toBlob :: c -> Content id c
 toBlob c = ABlob (Blob c)
 
-toIdList :: Num id => [id] -> Content c id
+toIdList :: Num id => [id] -> Content id c
 toIdList ids = AnIdList $ IdList $ map BlobId ids
 
 toBlobHandle :: Num id => id -> Handle id
@@ -118,9 +107,6 @@ toIdListHandle n = OfIdList (IdListId n)
         bids :: [BlobId Int]
         bids = [fromJust $ handleToBlobId i]
 --(m''', i'') = insert (AnIdList $ IdList [IdListId 0]) empty
-handleToBlobId :: Handle id -> Maybe (BlobId id)
-handleToBlobId (OfBlob id@(BlobId _)) = Just id
-handleToBlobId  _ = Nothing
 
 -- allowed
 b0 = Blob "hello world"
@@ -131,10 +117,10 @@ id0 = IdListId 0
 -- not allowed
 --id1 = IdList [IdListId 0]
 
-m = M.empty :: M.Map (Handle id) (Content String id)
+m = M.empty :: M.Map (Handle id) (Content id String)
 
 
-n = m :: M.Map (Handle Id) (Content String Id)
+n = m :: M.Map (Handle Id) (Content Id String)
 
 n' = M.insert (OfBlob b0_id) (ABlob b0) n -- check
 n'' = M.insert (OfIdList (IdListId 0)) (AnIdList (IdList [b0_id])) n'

@@ -26,6 +26,5 @@ instance Read id => Read (BlobId id) where
         else []
     readsPrec _ _ = []
 
-
 instance Unwrap BlobId where
     unwrap (BlobId id) = id

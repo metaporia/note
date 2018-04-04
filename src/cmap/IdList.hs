@@ -11,4 +11,6 @@ instance Read c => Read (IdList c) where
 instance Show id => Show (IdList id) where
     show (IdList ids) = show ids
 
+toBIds :: IdList id -> [BlobId id]
+toBIds (IdList bids) = bids
 

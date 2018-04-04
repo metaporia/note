@@ -1,6 +1,13 @@
 
 import CMap
 import Select
+import Content
+import BlobId
+import Blob
+import IdList
+import IdListId
+import Helpers
+
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
 import Test.QuickCheck.Classes
@@ -21,6 +28,8 @@ main = do
     test applicative triggerBlobId
     test monad triggerBlobId
 
+    test functor triggerContent
+
 
 instance Arbitrary Selection where
     arbitrary = uncurry Sel <$> (tups `suchThat` filterHiLo)
@@ -38,4 +47,13 @@ ops = ["some", ""]
 space = (,,) <$> ops <*> ops <*> ops
 
 call = fmap (selPosn . toList) space
+
+-- Content
+instance (Arbitrary id, Arbitrary c) => Arbitrary (Content id c) where
+    arbitrary = oneof [ (ABlob . Blob) <$> arbitrary
+                      , (AnIdList . IdList) <$> arbitrary]
+
+instance (Eq id, Eq c) => EqProp (Content id c) where (=-=) = eq
+
+triggerContent = undefined :: Content Id (Int, Int, Int)
 
