@@ -2,65 +2,30 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module CMap where
 
+-- group exports related to CMap manipulation here. all auxiliary functionality
+-- should be hidden.
+
 import qualified Data.Map as M
 import Prelude hiding (insert, lookup)
 import Data.Maybe (fromJust)
 import Data.Monoid (Monoid, (<>))
+import Data.Char (isDigit, isAscii)
+
+import Blob
+import BlobId
+import IdList
+import IdListId
+import Helpers
+import Content
+import Handle
 
 --blobMap = M.empty :: M.Map (BlobId id) (Blob c)
 
-newtype BlobId id = BlobId id deriving (Eq, Ord)
 
-instance Show id => Show (BlobId id) where
-    show (BlobId b) = 'b': show b
-
-instance Functor BlobId where
-    fmap f (BlobId id) = BlobId (f id)
-
-instance Applicative BlobId where
-    pure = BlobId
-    BlobId f <*> BlobId a = BlobId (f a)
-
-instance Monad BlobId where
-    return = pure
-    BlobId a >>= f = f a
-
-class Unwrap f where
-    unwrap :: f a -> a
-
-instance Unwrap BlobId where
-    unwrap (BlobId id) = id
-
-
-newtype Blob c = Blob c deriving (Eq, Show)
 
 --idListMap = M.empty :: M.Map (IdListId id) (IdList id)
 
-newtype IdListId id = IdListId id deriving (Eq, Ord)
 
-instance Show id => Show (IdListId id) where
-    show (IdListId id) = 'l':show id
-
-newtype IdList id = IdList [BlobId id] deriving (Eq)
-
-instance Show id => Show (IdList id) where
-    show (IdList ids) = show ids
-
-data Handle id =  OfBlob (BlobId id) 
-               | OfIdList (IdListId id)
-               deriving (Eq, Ord)
-
-instance Show id => Show (Handle id) where
-    show (OfBlob id) = show id
-    show (OfIdList id) = show id
-
-data Content c id = ABlob (Blob c) 
-                  | AnIdList (IdList id)
-                  deriving (Eq)
-
-instance (Show c, Show id) => Show (Content c id) where
-    show (ABlob (Blob b)) = show b
-    show (AnIdList (IdList ids)) = show ids
 
 type Id = Int
 

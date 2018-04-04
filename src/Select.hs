@@ -8,6 +8,15 @@ import Prelude hiding (lookup, insert)
 import Data.Maybe (fromJust)
 import qualified Data.Map as M
 
+import Blob
+import BlobId
+import IdList
+import IdListId
+import Handle
+import Content
+
+import Helpers
+
 data Selection = Sel { sIdx :: Int
                      , eIdx :: Int
                      } deriving (Eq, Show)

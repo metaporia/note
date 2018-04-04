@@ -24,12 +24,21 @@ dependencies:
 - containers
 
 library:
-  source-dirs: src
+  source-dirs: 
+      - src
+      - src/cmap
   exposed-modules:
       - CMap
       - Lib
   other-modules:
       - Select
+      - Content
+      - Handle
+      - Helpers
+      - Blob
+      - BlobId
+      - IdList
+      - IdListId
 
 
 executables:
