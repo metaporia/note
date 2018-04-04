@@ -46,14 +46,9 @@ splitBlob bid@(BlobId id) selection cMap =
           selHandle = OfBlob <$> selHandle'
           selHandle' = (ins >>= return . (\(_, bids) -> bids !! handleIdx))
           handleIdx :: Int
-          handleIdx = case (selPosn <$> parts) of
-                      Just idx -> 
-                          case idx of
-                                Just i -> i
-                                Nothing -> 
-                                    error "no sel handle idx (inner)"
+          handleIdx = case (mPreSelPost >>= selPosn) of
+                      Just idx -> idx
                       Nothing -> error "no sel handle idx"
-  -- TODO: return the correct handle, that of the selection
           ins = parts >>= (\parts -> insertCs parts cMap)
           parts :: Maybe [String]
           parts = (filter isNotEmpty) <$> mPreSelPost
@@ -69,10 +64,11 @@ selPosn [] = Nothing
 selPosn [x] = Nothing
 selPosn [x,y] = Nothing
 selPosn [x,y,z]
-  | isNotEmpty x && isNotEmpty y = Just 1
-  | x == [] && isNotEmpty y = Just 0
-  | isNotEmpty x = Just 0
-  | x == [] && y == [] && isNotEmpty z = Just 0
+  | isNotEmpty x && isNotEmpty y = Just 1 -- (some, some, _)
+  | x == [] && isNotEmpty y = Just 0 -- (none, some, _)
+  | isNotEmpty x = Just 0 -- (some, _, _)
+  | x == [] && y == [] && isNotEmpty z = Just 0 -- (none, none, some)
+  | x == [] && isNotEmpty y && z == [] = Just 0 -- (none, some, none)
   | otherwise = Nothing
 
 -- Nothing case represents the presence if non-BlobIds in list
@@ -114,7 +110,7 @@ toList (x, y, z) = x: y: z :[]
 
 b = "hello world"
 --   01234567890
-s = Sel 3 8
+s = Sel 0 11
 (k, i) = initWith b
 
 (l, j) = fromJust $ insertCs ["hello ", "world ", "this is the end."] empty'
