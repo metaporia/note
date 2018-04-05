@@ -13,7 +13,7 @@ import CMap ( CMap(CMap, cmap, nextId), initWith
             , toIdList, toBlobHandle, empty, lookup
             , derefBlobId, toBlob
              )
-import Data.List (splitAt)
+import Data.List (splitAt, foldl', scanl')
 import Prelude hiding (lookup, insert)
 import Data.Maybe (fromJust)
 import qualified Data.Map as M
@@ -192,9 +192,23 @@ insertCs cs cMap = case sequence . snd $ tup of
                      Just bids -> Just (fst tup, bids)
                      Nothing -> Nothing
     where tup :: (CMap c id, [Maybe (BlobId id)])
-          tup = foldl  (\(m, bids) c -> 
+          tup = foldl' (\(m, bids) c -> 
               let (m', handle) = (insert (toBlob c) m) 
-               in (m', handleToBlobId handle : bids)) (cMap, []) cs
+               in (m', bids ++ [handleToBlobId handle])) (cMap, []) cs
+
+-- rewrite without fold 
+--insertCs' :: forall c id. (Ord id, Num id)
+--         => [c] -> CMap c id -> Maybe (CMap c id, [BlobId id])
+
+insertCs' cs cMap = tup
+   -- case sequence . snd $ tup of
+   --                  Just bids -> Just (fst tup, bids)
+   --                  Nothing -> Nothing
+     where --tup :: (CMap c id, [Maybe (BlobId id)])
+          tup = scanl' (\(m, bids) c -> 
+              let (m', handle) = (insert (toBlob c) m) 
+               in (m', bids ++ [handleToBlobId handle])) (cMap, []) cs
+
 
 -- | Deletes entry of bid, inserts the equivalent IdListId handle (using the 
 -- same id #), and returns the modified map.
@@ -223,9 +237,19 @@ empty' = empty :: CMap String Id
 
 b' = "hello world"
 --   01234567890
-s = Sel 0 11
+s = Sel 3 8
 (k, i) = initWith b
 
 (l, j) = fromJust $ insertCs ["hello ", "world ", "this is the end."] empty'
 (l', c) = fromJust $ splitBlob (BlobId 0) s (fst $ initWith "hello world")
+-- step through splitBlob to find point fo bid list reversal.
 
+(mmap, integralHandle) = initWith "hello world"
+cs = toList $ sel "hello world" (Sel 3 8)
+(mmap', bidL) = fromJust $ insertCs cs mmap  -- reversed. fuck
+
+qsort [] = []
+qsort (a:as) = qsort left ++ [a] ++ qsort right
+    where (left, right) = (filter (<=a) as, filter (>a) as)
+
+main = print (qsort [8,4,0,3,1,23,11,18])
