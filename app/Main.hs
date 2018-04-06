@@ -5,3 +5,4 @@ import Prelude hiding (insert, lookup)
 
 main :: IO ()
 main = someFunc
+

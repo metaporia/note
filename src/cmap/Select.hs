@@ -46,26 +46,26 @@ splitIdList = undefined
 -- | For each BlobId a contextualy appropriate Selection is generated/derived
 -- from the given Selection--that is, the Selection parameter w.r.t. the entire
 -- dereffed IdList.
-genSels :: --(Ord id, Num id) => 
-           IdList Id
-        -> Selection
-        -> CMap String Id
-        -> [(BlobId Id, Maybe Selection)]
-genSels idList sel cMap = (\(x,_,_) -> x) (foldr update base ids)
-    where 
-        ids :: [BlobId Id]
-        ids = toBIds idList
-        base = ([], Just sel, Just 0)
-        update :: BlobId Id 
-               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
-               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
-        update bid (retTups, currSel, lastsbG) = 
-                let bidLen = length <$> derefBlobId bid cMap :: Maybe Int
-                    nextSel = join $ (\l -> (updateSel l) <$> currSel) <$> sbG
-                    sbG = bidLen >>= (\bidL -> (bidL+) <$> lastsbG)
-                    curTup = (bid, currSel)
-                 in (curTup:retTups, nextSel, sbG)
-
+--genSels :: --(Ord id, Num id) => 
+--           IdList Id
+--        -> Selection
+--        -> CMap String Id
+--        -> [(BlobId Id, Maybe Selection)]
+--genSels idList sel cMap = (\(x,_,_) -> x) (foldr update base ids)
+--    where 
+--        ids :: [BlobId Id]
+--        ids = toBIds idList
+--        base = ([], Just sel, Just 0)
+--        update :: BlobId Id 
+--               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
+--               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
+--        update bid (retTups, currSel, lastsbG) = 
+--                let bidLen = length <$> derefBlobId bid cMap :: Maybe Int
+--                    nextSel = join $ (\l -> (updateSel l) <$> currSel) <$> sbG
+--                    sbG = bidLen >>= (\bidL -> (bidL+) <$> lastsbG)
+--                    curTup = (bid, currSel)
+--                 in (curTup:retTups, nextSel, sbG)
+--
 b = "This is the first line.\n"
 b1 = "This is the second line.\n"
 b2 = "This is the third line.\n"
@@ -78,15 +78,15 @@ bs = b ++ b1 ++ b2
 --fetched = map derefFrom test'
 --    where derefFrom (bid, mSel) = (derefBlobId bid m'', mSel)
 --
-fetched' = foldr derefFrom ([], m'') test'
+--fetched' = foldr derefFrom ([], m'') test'
 
 derefFrom (id, mSel) (ret, map) = (ret', map')
     where 
       (map', handle) = fromJust $ mSel >>= (\s-> splitBlob id s map)
       ret' = (id, handle):ret
 
-ma = snd fetched'
-ltup = fst fetched'
+--ma = snd fetched'
+--ltup = fst fetched'
 
 
 idList = (IdList bids)
@@ -160,7 +160,7 @@ splitBlob bid@(BlobId id) selection cMap =
     where s = derefBlobId bid cMap
           --ins :: Maybe (CMap String id, [BlobId id])
           --TODO: make vvv less fragile (what about toIdListHandle case?)
-          selHandle = OfBlob <$> selHandle'
+          selHandle = selHandle'
           selHandle' = (ins >>= return . (\(_, bids) -> bids !! handleIdx))
           handleIdx :: Int
           handleIdx = case (mPreSelPost >>= selPosn) of
