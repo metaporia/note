@@ -1,4 +1,4 @@
-module Handle where
+module Handle () where
 
 import BlobId
 import IdListId
@@ -30,3 +30,31 @@ handleToBlobId  _ = Nothing
 handleToIdListId :: Handle id -> Maybe (IdListId id)
 handleToIdListId (OfIdList id) = Just id
 handleToIdListId _ = Nothing
+
+toBlobHandle :: Num id => id -> Handle id
+toBlobHandle n = OfBlob (BlobId n)
+
+toIdListHandle :: Num id => id -> Handle id
+toIdListHandle n = OfIdList (IdListId n)
+
+
+
+
+
+
+
+
+
+
+toStr :: (Ord a, Show a, Num a) => a -> a -> String
+toStr n id
+  | n > 1 = 'l':(show id)
+  | otherwise = 'b':(show id)
+
+to' n id = to $ toStr n id
+
+tob id = to' 0 id
+tol id = to' 2 id
+
+to :: String -> Handle Id
+to s = read s :: Handle Id

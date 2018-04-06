@@ -19,14 +19,14 @@ import Helpers
 import Content
 import Handle
 
-data CMap c id = CMap { cmap :: (M.Map (Handle id) (Content id c)) 
+data CMap c id = CMap { cmap :: (M.Map id (Content id c)) 
                       , nextId :: id} deriving (Eq, Show)
 
 empty :: Num id => CMap c id
 empty = CMap M.empty 0
 
 insertKV :: (Num id, Ord id)
-          => Handle id 
+          => id 
           -> Content id c 
           -> CMap c id 
           -> CMap c id
@@ -36,46 +36,44 @@ insertKV handle content cMap =
      
 
 insert :: (Num id, Ord id) 
-       => Content id c -> CMap c id -> (CMap c id, Handle id)
+       => Content id c -> CMap c id -> (CMap c id, id)
 insert val map = 
     (CMap (M.insert currentId val (cmap map)) (nextId map + 1), currentId)
     where 
-        currentId = wrap $ nextId map
-        wrap = case val of
-                   ABlob _ -> (\id -> OfBlob (BlobId id))
-                   AnIdList _ -> (\id -> OfIdList (IdListId id))
+        currentId = nextId map
 
 lookup :: (Num id, Ord id)
-       => Handle id -> CMap c id -> Maybe (Content id c)
+       => id -> CMap c id -> Maybe (Content id c)
 lookup handle cMap = M.lookup handle map
     where map = cmap cMap
 
 
-derefBlobId :: forall id c. (Ord id, Num id) 
-            =>  BlobId id -> CMap c id -> Maybe c
-derefBlobId bid map = lookup handle map >>= blobFromContent
-    where 
-        handle :: Handle id
-        handle = OfBlob bid
+--derefBlobId' :: (Ord id, Num id) => id -> CMap c id -> Maybe c
+--derefBlobId' bid map' = lookup id map' >>= blobFromContent
+
+
+-- only call this if id is in fact a BlobId 
+derefBlobId :: (Ord id, Num id) => id -> CMap c id -> Maybe c
+derefBlobId id m = lookup id m >>= blobFromContent
 
 derefIdListId :: forall id c.(Ord id, Num id, Monoid c)
-              => IdListId id -> CMap c id -> Maybe c 
+              => id -> CMap c id -> Maybe c 
 derefIdListId id map' = 
-    lookup handle map' >>= idsFromContent >>= 
-        fmap mconcat . sequence . (\ids -> 
-            map (\id -> derefBlobId  id map') ids)
-        where handle :: Handle id
-              handle = OfIdList id
-
-deref :: (Num id, Ord id, Monoid c) => Handle id -> CMap c id -> Maybe c
-deref (OfBlob bid) = derefBlobId bid
-deref (OfIdList ids) = derefIdListId ids
+    lookup id map' >>= (fmap . fmap $ unwrap) . idsFromContent >>=
+        (fmap mconcat) . sequence . (\ids -> 
+            map (\id' -> derefBlobId id' map') ids)
+    
+deref :: (Num id, Ord id, Monoid c) => id -> CMap c id -> Maybe c
+deref id cMap = case lookup id cMap of
+                  Just (ABlob _) -> derefBlobId id cMap
+                  Just (AnIdList _) -> derefIdListId id cMap
+                  Nothing -> Nothing
 
 initWithFile :: (Num id, Ord id)
-             => FilePath -> IO (CMap String id, Handle id)
+             => FilePath -> IO (CMap String id, id)
 initWithFile fp = readFile fp >>= return . initWith
 
-initWith :: (Ord id, Num id) => c -> (CMap c id, Handle id)
+initWith :: (Ord id, Num id) => c -> (CMap c id, id)
 initWith c = insert (toBlob c) empty
 
 blobFromContent :: Content id c -> Maybe c
@@ -95,17 +93,10 @@ toBlob c = ABlob (Blob c)
 toIdList :: Num id => [id] -> Content id c
 toIdList ids = AnIdList $ IdList $ map BlobId ids
 
-toBlobHandle :: Num id => id -> Handle id
-toBlobHandle n = OfBlob (BlobId n)
-
-toIdListHandle :: Num id => id -> Handle id
-toIdListHandle n = OfIdList (IdListId n)
-
 (m', i) = insert (toBlob "hello world") empty
 (m'', i') = insert (AnIdList $ IdList bids) m'
     where 
-        bids :: [BlobId Int]
-        bids = [fromJust $ handleToBlobId i]
+        bids = [BlobId i]
 --(m''', i'') = insert (AnIdList $ IdList [IdListId 0]) empty
 
 -- allowed
@@ -117,13 +108,13 @@ id0 = IdListId 0
 -- not allowed
 --id1 = IdList [IdListId 0]
 
-m = M.empty :: M.Map (Handle id) (Content id String)
+m = M.empty :: M.Map (id) (Content id String)
 
 
-n = m :: M.Map (Handle Id) (Content Id String)
+n = m :: M.Map (Id) (Content Id String)
 
-n' = M.insert (OfBlob b0_id) (ABlob b0) n -- check
-n'' = M.insert (OfIdList (IdListId 0)) (AnIdList (IdList [b0_id])) n'
+--n' = M.insert (OfBlob b0_id) (ABlob b0) n -- check
+--n'' = M.insert (OfIdList (IdListId 0)) (AnIdList (IdList [b0_id])) n'
 
 --l = insert (OfIdList (IdListId 0)) (AnIdList (IdList (IdListId 0))) 
 -- prevented!

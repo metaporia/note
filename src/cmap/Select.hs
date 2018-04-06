@@ -9,8 +9,8 @@ Further commentary, (with *bold*, and _italics_?)
 module Select where
 
 import CMap ( CMap(CMap, cmap, nextId), initWith
-            , insert, deref, derefIdListId, insertKV, toIdListHandle
-            , toIdList, toBlobHandle, empty, lookup
+            , insert, deref, derefIdListId, insertKV
+            , toIdList, empty, lookup
             , derefBlobId, toBlob
              )
 import Data.List (splitAt, foldl', scanl')
@@ -23,7 +23,7 @@ import Blob
 import BlobId
 import IdList
 import IdListId
-import Handle
+import Handle ()
 import Content
 
 import Helpers
@@ -32,29 +32,33 @@ import Helpers
 -- the requested selection.
 
 select :: forall id. (Ord id, Num id)
-       => Handle id -> Selection -> CMap String id -> (CMap String id, Handle id)
-select (OfBlob bid) = undefined 
-select (OfIdList lid) = undefined 
+       => id -> Selection -> CMap String id -> (CMap String id, id)
+select bid = undefined 
 
 splitIdList :: forall id. (Ord id, Num id)
-            => Handle id
+            => id
             -> Selection
             -> CMap String id
-            -> (CMap String id, Handle id)
+            -> (CMap String id, id)
 splitIdList = undefined
 
-genSels :: forall id. (Ord id, Num id)
-        => IdList id
+
+-- | For each BlobId a contextualy appropriate Selection is generated/derived
+-- from the given Selection--that is, the Selection parameter w.r.t. the entire
+-- dereffed IdList.
+genSels :: --(Ord id, Num id) => 
+           IdList Id
         -> Selection
-        -> CMap String id
-        -> [(BlobId id, Maybe Selection)]
+        -> CMap String Id
+        -> [(BlobId Id, Maybe Selection)]
 genSels idList sel cMap = (\(x,_,_) -> x) (foldr update base ids)
     where 
+        ids :: [BlobId Id]
         ids = toBIds idList
         base = ([], Just sel, Just 0)
-        update :: BlobId id 
-               -> ([(BlobId id, Maybe Selection)], Maybe Selection, Maybe Int)
-               -> ([(BlobId id, Maybe Selection)], Maybe Selection, Maybe Int)
+        update :: BlobId Id 
+               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
+               -> ([(BlobId Id, Maybe Selection)], Maybe Selection, Maybe Int)
         update bid (retTups, currSel, lastsbG) = 
                 let bidLen = length <$> derefBlobId bid cMap :: Maybe Int
                     nextSel = join $ (\l -> (updateSel l) <$> currSel) <$> sbG
@@ -68,12 +72,12 @@ b2 = "This is the third line.\n"
 bs = b ++ b1 ++ b2
 
 
-testSel = Sel 10 25
-ids = fromJust $ handleToIdListId handle
-test' = genSels idList  testSel m'' ---success! with that solitary test case :(
-fetched = map derefFrom test'
-    where derefFrom (bid, mSel) = (derefBlobId bid m'', mSel)
-
+--testSel = Sel 10 25
+--ids = fromJust $ handleToIdListId handle
+--test' = genSels idList  testSel m'' ---success! with that solitary test case :(
+--fetched = map derefFrom test'
+--    where derefFrom (bid, mSel) = (derefBlobId bid m'', mSel)
+--
 fetched' = foldr derefFrom ([], m'') test'
 
 derefFrom (id, mSel) (ret, map) = (ret', map')
@@ -84,8 +88,6 @@ derefFrom (id, mSel) (ret, map) = (ret', map')
 ma = snd fetched'
 ltup = fst fetched'
 
-to :: String -> Handle Id
-to s = read s :: Handle Id
 
 idList = (IdList bids)
 (m', bids) = fromJust $ insertCs [b,b1,b2] empty'
@@ -94,8 +96,9 @@ idList = (IdList bids)
 -- given handle, and m''
 -- TODO
 -- □ fix fetched' so that, e.g., 
---   a) l0 -> [b4,b5] and not [b5,b4], and 
---   b) (b0 = l0) -> [b4, b5]. currently b0 has been removed, but not replaced.
+--   ▣  a) l0 -> [b4,b5] and not [b5,b4], and 
+--   □  b) (b0 = l0) -> [b4, b5]. currently b0 has been removed, but not replaced.
+--          - the key is that, b0 must be replaced with l0
 
 
 
@@ -142,7 +145,7 @@ subBy idx shift = if diff >= 0 then diff else 0
 splitBlob :: (Ord id, Num id) => BlobId id
           -> Selection 
           -> CMap String id
-          -> Maybe (CMap String id, Handle id)
+          -> Maybe (CMap String id, id)
 -- | NB: the `selection` param represets starting and ending indices of the
 --       derefed `Blob` reffed by `bid` *relative to bid's String`*!!
 --       E.g., if bid points to "

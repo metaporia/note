@@ -14,3 +14,4 @@ toList (x, y, z) = x: y: z :[]
 
 len :: Foldable t => t a -> Int
 len = length
+
