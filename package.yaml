@@ -22,16 +22,23 @@ description:         Please see the README on Github at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - containers
+- cryptonite
+- bytestring
+- bytestring-conversion
+- text
+- memory
 
 library:
   source-dirs: 
       - src
       - src/cmap
   exposed-modules:
-      - CMap
+      #- CMap
       - Lib
-  other-modules:
+      - HCMap
       - Select
+  other-modules:
+      #      - Select
       - Content
       - Handle
       - Helpers
@@ -39,6 +46,7 @@ library:
       - BlobId
       - IdList
       - IdListId
+        #- HCMap
 
 
 executables:

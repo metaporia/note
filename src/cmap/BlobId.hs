@@ -1,4 +1,5 @@
 module BlobId where
+    -- DEPRECATED
 
 import Data.Char (isDigit)
 import Helpers
