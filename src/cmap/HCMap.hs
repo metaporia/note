@@ -152,18 +152,17 @@ selectFromBlobId id s m =
 selectFromBlob :: forall alg c. (HashAlg alg, HCMContent c) => 
     Digest alg -> Blob c -> Selection -> HCMap alg c -> Maybe (HCMap alg c, Digest alg)
 selectFromBlob id (Blob c) s m = do 
-          content <- mContent
-          map' <- mMap
+          (selIdx, chunks) <- case getSelIdx $ sel c s of
+                     Left _ -> Nothing
+                     Right tup -> Just tup
+          let inserts = sequence $ map (\b-> insertBlob (toBlob b) m) chunks
+              mMapNIds = foldr (\(m, h) (m', hs) -> (m <> m', h:hs)) (empty, []) <$> inserts
+
+          ids <- snd <$> mMapNIds
+          let content = toIdList ids
+          map' <- fmap fst mMapNIds
           map'' <- replaceBlob id content map'
-          Just (map'', selId) -- TODO: return correct 
-          where chunks = toList $ sel c s
-                selId = id
-                inserts = sequence $ map (\b-> insertBlob (toBlob b) m) chunks
-                mMapNIds = foldr (\(m, h) (m', hs) -> (m <> m', h:hs)) (empty, []) <$> inserts
-                mMap :: Maybe (HCMap alg c)
-                mMap = fmap fst mMapNIds
-                mContent :: Maybe (Content alg c)
-                mContent = fmap (toIdList . snd) mMapNIds
+          Just (map'', ids !! selIdx)
 
 selectFromBlob' id (Blob c) s m = chunks
           where chunks = toList $ sel c s
