@@ -42,7 +42,6 @@ main = exampleHashWith "hello world"
 
 newtype HCMap alg c = Map { hcmap :: M.Map (Digest alg) (Content alg c) } deriving (Eq)
 
---(HashAlgorithm alg, Monoid c, Eq c, ToByteString c, Selectable c) => 
 type HCMContent c = (Monoid c, Eq c, ToByteString c, Selectable c)
 type HashAlg alg = HashAlgorithm alg
 
@@ -128,28 +127,57 @@ emptySHA1 :: HCMap SHA1 c
 emptySHA1 = empty
 
 -- | Takes a 'Content alg id' and if `ABlob` then splits the given blob
--- according to the 'Selection'. Returns `Nothing` if variant is `AnIdList`.
+-- according to the 'Selection'. Returns `Nothing` if variant is `AnIdList`,
+-- otherwise returns @Maybe (HCMap alg c, Digest alg)@.
+--
 -- How should the map be mutated? the value pointed to by id will be replaced
 -- with the `IdList` of the chunks of the 'Blob' param.
+--
 -- error handling?
-selectFromBlob :: forall alg c. (HashAlg alg, HCMContent c) =>
-    Digest alg -> Selection -> HCMap alg c-> Maybe (HCMap alg c)
-selectFromBlob id s m = 
+selectFromBlobId :: forall alg c. (HashAlg alg, HCMContent c) =>
+    Digest alg -> Selection -> HCMap alg c-> Maybe (HCMap alg c, Digest alg)
+selectFromBlobId id s m = 
     case lookup m id of
-      Just (ABlob (Blob c)) -> do 
+      Just (ABlob blob) -> selectFromBlob id blob s m
+      Just (AnIdList _) -> Nothing
+      Nothing -> Nothing 
+
+-- | Nearly identical to 'selectFromBlobId', 'selectFromBlob' performs the same
+-- operations--insert chunks, replace @(id, blob)@ with @(id, idList)@--, but
+-- does not perform a 'lookup', is for use in functions that have already
+-- fetched the relevant 'Content'.
+selectFromBlob :: forall alg c. (HashAlg alg, HCMContent c) => 
+    Digest alg -> Blob c -> Selection -> HCMap alg c -> Maybe (HCMap alg c, Digest alg)
+selectFromBlob id (Blob c) s m = do 
           content <- mContent
           map' <- mMap
-          replaceBlob id content map'
-
+          map'' <- replaceBlob id content map'
+          Just (map'', selId) -- TODO: return correct 
           where chunks = toList $ sel c s
+                selId = id
                 inserts = sequence $ map (\b-> insertBlob (toBlob b) m) chunks
                 mMapNIds = foldr (\(m, h) (m', hs) -> (m <> m', h:hs)) (empty, []) <$> inserts
                 mMap :: Maybe (HCMap alg c)
                 mMap = fmap fst mMapNIds
                 mContent :: Maybe (Content alg c)
                 mContent = fmap (toIdList . snd) mMapNIds
-      Just (AnIdList _) -> Nothing
-      Nothing -> Nothing 
 
+selectFromBlob' id (Blob c) s m = inserts
+          where chunks = toList $ sel c s
+                selId = id
+                inserts = sequence $ map (\b-> insertBlob (toBlob b) m) chunks
+                mMapNIds = foldr (\(m, h) (m', hs) -> (m <> m', h:hs)) (empty, []) <$> inserts
+                mMap = fmap fst mMapNIds
+IdList . snd) mMapNIds
 
+-- | Takes an id/key/hash and a 'Selection'; fetches the id's attached
+-- 'Content' and if its a 'Blob' then calls 'selectFromBlob', otherwise
+-- contextually appropriate 'Selection''s are generated for each id the
+-- 'IdList' and 'select' is called recursively on each @(id, sel)@ pair. 
+-- The return value is a tuple @(map', id)@ where @map'@ is the updated 'HCMap'
+-- and @id@ is the id/key/hash of the requested 'Selection'.
+--
+-- This may be terribly inefficient.
+--select :: (HashAlg alg, HCMContent c) => Digest alg -> Selection -> HCMap alg c -> Maybe (HCMap alg c, Digest alg)
+select id s mapp = undefined
 

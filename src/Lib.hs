@@ -41,7 +41,8 @@ commutative =
 idList = (toIdList [i''', i', i''])
 mapp = fromJust $ replaceBlob i idList  n'''
 text = "hello world" :: T.Text
-mapp' = fromJust $ selectFromBlob i (Sel 4 8) n
+mapp' = fromJust $ selectFromBlobId i (Sel 4 8) n
+nm =  selectFromBlob' i (Blob text) (Sel 4 8) n
 -- mapp == mapp'
 
 (ma, hash') = fromJust $ insertBlob (toBlob "hello world" :: Content SHA1 T.Text) emptySHA1
