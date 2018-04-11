@@ -1,6 +1,6 @@
 !_TAG_FILE_FORMAT	2
 !_TAG_FILE_SORTED	1
-!_TAG_FILE_CODEX	3d2290f2763592bfc7f815c1daec684e
+!_TAG_FILE_CODEX	556c0720fb035d3ba71c105f858cc210
 !	/home/aporia/.stack/indices/Hackage/packages/array/0.5.1.1/array-0.5.1.1/Data/Array/Base.hs	268
 !	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Arr.hs	496
 !	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntMap/Base.hs	296
@@ -281,8 +281,8 @@ $>	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/F
 --initWithFile	./src/cmap/CMap.hs	74
 --insert	./src/cmap/CMap.hs	38
 --insert	./src/cmap/CMap.hs	40
+--insert'	./src/cmap/HCMap.hs	117
 --insert'	./src/cmap/HCMap.hs	118
---insert'	./src/cmap/HCMap.hs	119
 --insertCs	./src/cmap/Select.hs	166
 --insertCs	./src/cmap/Select.hs	168
 --insertCs'	./src/cmap/Select.hs	180
@@ -310,10 +310,11 @@ $>	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/F
 --qsort	./src/cmap/Select.hs	228
 --replace	./src/cmap/Select.hs	198
 --replace	./src/cmap/Select.hs	200
---ret	./src/Lib.hs	50
+--ret	./src/Lib.hs	51
 --s	./src/cmap/Select.hs	217
 --selPosn	./src/cmap/Select.hs	153
 --selPosn	./src/cmap/Select.hs	154
+--select	./src/cmap/HCMap.hs	181
 --select	./src/cmap/Select.hs	40
 --select	./src/cmap/Select.hs	42
 --sequenceA_	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/Collection/Mappable.hs	68
@@ -325,7 +326,7 @@ $>	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/F
 --splitBlob	./src/cmap/Select.hs	130
 --splitIdList	./src/cmap/Select.hs	44
 --splitIdList	./src/cmap/Select.hs	49
---t	./src/Lib.hs	48
+--t	./src/Lib.hs	49
 --takeHeadChunk	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/src/Data/Binary/Get.hs	113
 --takeHeadChunk	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/src/Data/Binary/Get.hs	114
 --test'	./src/cmap/Select.hs	265
@@ -2147,7 +2148,7 @@ GroupResult	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/found
 H	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/Random/Entropy/Unix.hs	22
 HANDLE	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Windows.hs	90
 HANDLE	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/System/CPUTime.hsc	143
-HCMContent	./src/cmap/HCMap.hs	46
+HCMContent	./src/cmap/HCMap.hs	45
 HCMap	./src/cmap/HCMap.hs	43
 HMAC	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/MAC/HMAC.hs	36
 HPrintfType	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Text/Printf.hs	278
@@ -2171,7 +2172,7 @@ HasNegation	/home/aporia/.stack/indices/Hackage/packages/basement/0.0.4/basement
 HasResolution	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Fixed.hs	75
 HasTests	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/Check/Types.hs	46
 Hash	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/Hash.hs	8
-HashAlg	./src/cmap/HCMap.hs	47
+HashAlg	./src/cmap/HCMap.hs	46
 HashAlg	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/benchs/Bench.hs	27
 HashAlg	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/Hash.hs	27
 HashAlgorithm	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/Hash/Types.hs	29
@@ -4393,7 +4394,7 @@ aeadTag	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-
 aeadTaglen	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/BlockCipher.hs	81
 aeson	/home/aporia/.stack/indices/Hackage/packages/attoparsec/0.13.1.0/attoparsec-0.13.1.0/benchmarks/Aeson.hs	346
 aeson	/home/aporia/.stack/indices/Hackage/packages/attoparsec/0.13.1.0/attoparsec-0.13.1.0/benchmarks/Aeson.hs	347
-alg	./src/cmap/HCMap.hs	47
+alg	./src/cmap/HCMap.hs	46
 aliases	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/Network/HostName.hsc	66
 aliceMultBob	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/KAT_Curve25519.hs	13
 aliceMultBob	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/KAT_Curve448.hs	13
@@ -5711,7 +5712,7 @@ byteswap32Prim	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryp
 byteswap32Prim	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/Internal/CompatPrim.hs	59
 byteswap32Prim	/home/aporia/.stack/indices/Hackage/packages/memory/0.14.11/memory-0.14.11/Data/Memory/Internal/CompatPrim.hs	50
 byteswap32Prim	/home/aporia/.stack/indices/Hackage/packages/memory/0.14.11/memory-0.14.11/Data/Memory/Internal/CompatPrim.hs	52
-c	./src/cmap/HCMap.hs	46
+c	./src/cmap/HCMap.hs	45
 c	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Data.hs	246
 c	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/Collection/Mutable.hs	42
 c	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/Collection/Sequential.hs	206
@@ -7471,10 +7472,10 @@ demandInput_	/home/aporia/.stack/indices/Hackage/packages/attoparsec/0.13.1.0/at
 demandInput_	/home/aporia/.stack/indices/Hackage/packages/attoparsec/0.13.1.0/attoparsec-0.13.1.0/Data/Attoparsec/Internal.hs	85
 denominator	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	114
 denominator	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Real.hs	99
-deref	./src/cmap/HCMap.hs	104
-deref	./src/cmap/HCMap.hs	106
-derefIds	./src/cmap/HCMap.hs	113
-derefIds	./src/cmap/HCMap.hs	115
+deref	./src/cmap/HCMap.hs	103
+deref	./src/cmap/HCMap.hs	105
+derefIds	./src/cmap/HCMap.hs	112
+derefIds	./src/cmap/HCMap.hs	114
 derive	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/tools/derive/BinaryDerive.hs	11
 derive	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/tools/derive/BinaryDerive.hs	12
 deriveDecrypt	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/PubKey/ECIES.hs	43
@@ -8234,8 +8235,8 @@ emitChar	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundati
 emitChar	/home/aporia/.stack/indices/Hackage/packages/foundation/0.0.17/foundation-0.0.17/Foundation/String/Builder.hs	43
 empties	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/tests/LiteralRuleTest.hs	16
 empties	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/tests/LiteralRuleTest.hs	17
+empty	./src/cmap/HCMap.hs	60
 empty	./src/cmap/HCMap.hs	61
-empty	./src/cmap/HCMap.hs	62
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Base.hs	688
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Array.hs	62
 empty	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/Array.hs	63
@@ -8315,8 +8316,8 @@ emptyF	/home/aporia/.stack/indices/Hackage/packages/bytestring/0.10.8.1/bytestri
 emptyF	/home/aporia/.stack/indices/Hackage/packages/bytestring/0.10.8.1/bytestring-0.10.8.1/Data/ByteString/Builder/Prim/Internal.hs	168
 emptySB	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	1182
 emptySB	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	1183
+emptySHA1	./src/cmap/HCMap.hs	126
 emptySHA1	./src/cmap/HCMap.hs	127
-emptySHA1	./src/cmap/HCMap.hs	128
 emptySequ	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/PSQ.hs	469
 emptySequ	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/PSQ.hs	470
 emptySmallArray	/home/aporia/.stack/indices/Hackage/packages/primitive/0.6.2.0/primitive-0.6.2.0/Data/Primitive/SmallArray.hs	382
@@ -12749,8 +12750,8 @@ insert	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/container
 insert	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/Set/Base.hs	490
 insertBM	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntSet/Base.hs	448
 insertBM	/home/aporia/.stack/indices/Hackage/packages/containers/0.5.7.1/containers-0.5.7.1/Data/IntSet/Base.hs	449
-insertBlob	./src/cmap/HCMap.hs	68
-insertBlob	./src/cmap/HCMap.hs	70
+insertBlob	./src/cmap/HCMap.hs	67
+insertBlob	./src/cmap/HCMap.hs	69
 insertBy	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	555
 insertBy	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	556
 insertCFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ForeignPtr.hs	327
@@ -12773,8 +12774,8 @@ insertFloatX8#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc
 insertFloatX8#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3974
 insertHaskellFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ForeignPtr.hs	316
 insertHaskellFinalizer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/ForeignPtr.hs	317
-insertIdList	./src/cmap/HCMap.hs	79
-insertIdList	./src/cmap/HCMap.hs	81
+insertIdList	./src/cmap/HCMap.hs	78
+insertIdList	./src/cmap/HCMap.hs	80
 insertInt16X16#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3868
 insertInt16X16#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3869
 insertInt16X32#	/home/aporia/.stack/indices/Hackage/packages/ghc-prim/0.5.0.0/ghc-prim-0.5.0.0/GHC/Prim.hs	3888
@@ -12879,7 +12880,7 @@ install_interrupt_handler	/home/aporia/.stack/indices/Hackage/packages/base/4.9.
 instance	./src/cmap/Blob.hs	7
 instance	./src/cmap/BlobId.hs	9
 instance	./src/cmap/Content.hs	19
-instance	./src/cmap/HCMap.hs	49
+instance	./src/cmap/HCMap.hs	48
 instance	./src/cmap/Handle.hs	11
 instance	./src/cmap/IdListId.hs	8
 instance	./src/cmap/Select.hs	88
@@ -15029,8 +15030,8 @@ lookAheadE	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.
 lookAheadE	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/src/Data/Binary/Get/Internal.hs	336
 lookAheadM	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/src/Data/Binary/Get/Internal.hs	325
 lookAheadM	/home/aporia/.stack/indices/Hackage/packages/binary/0.8.3.0/binary-0.8.3.0/src/Data/Binary/Get/Internal.hs	326
+lookup	./src/cmap/HCMap.hs	123
 lookup	./src/cmap/HCMap.hs	124
-lookup	./src/cmap/HCMap.hs	125
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/IntTable.hs	47
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/IntTable.hs	48
 lookup	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Event/PSQ.hs	127
@@ -17094,6 +17095,7 @@ nilConstr	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0
 nilConstr	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/Data.hs	1083
 nistVectors	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/KAT_CMAC.hs	202
 nistVectors	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/tests/KAT_CMAC.hs	203
+nm	./src/Lib.hs	45
 noByteBuffer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Internals.hs	786
 noByteBuffer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Internals.hs	787
 noCharBuffer	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/IO/Handle/Internals.hs	782
@@ -21560,8 +21562,8 @@ replace	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/D
 replace	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/Data/Text/Encoding/Error.hs	125
 replace	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/Data/Text/Lazy.hs	741
 replace	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/Data/Text/Lazy.hs	749
-replaceBlob	./src/cmap/HCMap.hs	90
-replaceBlob	./src/cmap/HCMap.hs	92
+replaceBlob	./src/cmap/HCMap.hs	89
+replaceBlob	./src/cmap/HCMap.hs	91
 replenish	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/Random/Entropy/Unsafe.hs	24
 replenish	/home/aporia/.stack/indices/Hackage/packages/cryptonite/0.23/cryptonite-0.23/Crypto/Random/Entropy/Unsafe.hs	25
 replicate	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/List.hs	467
@@ -22577,10 +22579,14 @@ selDecidedStrictness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/b
 selName	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1034
 selSourceStrictness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1038
 selSourceUnpackedness	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/GHC/Generics.hs	1036
+select	./src/cmap/HCMap.hs	182
 select	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	492
 select	/home/aporia/.stack/indices/Hackage/packages/base/4.9.1.0/base-4.9.1.0/Data/OldList.hs	493
-selectFromBlob	./src/cmap/HCMap.hs	135
-selectFromBlob	./src/cmap/HCMap.hs	137
+selectFromBlob	./src/cmap/HCMap.hs	149
+selectFromBlob	./src/cmap/HCMap.hs	151
+selectFromBlob'	./src/cmap/HCMap.hs	165
+selectFromBlobId	./src/cmap/HCMap.hs	137
+selectFromBlobId	./src/cmap/HCMap.hs	139
 selection	./src/cmap/Select.hs	123
 sels	./test/Spec.hs	41
 semi	/home/aporia/.stack/indices/Hackage/packages/text/1.2.2.2/text-1.2.2.2/scripts/Arsec.hs	35

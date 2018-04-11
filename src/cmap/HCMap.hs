@@ -12,8 +12,9 @@ module HCMap where
 
 import Prelude hiding (lookup)
 import Data.Maybe (fromJust)
+import Data.Either (rights, lefts)
 import Data.Monoid ((<>))
-
+import Control.Monad.Except
 import Crypto.Hash --(hashWith, hash, SHA1(..), SHA256(..))
 
 import Data.ByteString (ByteString)
@@ -126,6 +127,8 @@ lookup mapp hash = M.lookup hash (hcmap mapp)
 emptySHA1 :: HCMap SHA1 c
 emptySHA1 = empty
 
+-- SELECTION LOGIC
+
 -- | Takes a 'Content alg id' and if `ABlob` then splits the given blob
 -- according to the 'Selection'. Returns `Nothing` if variant is `AnIdList`,
 -- otherwise returns @Maybe (HCMap alg c, Digest alg)@.
@@ -162,13 +165,13 @@ selectFromBlob id (Blob c) s m = do
                 mContent :: Maybe (Content alg c)
                 mContent = fmap (toIdList . snd) mMapNIds
 
-selectFromBlob' id (Blob c) s m = inserts
+selectFromBlob' id (Blob c) s m = chunks
           where chunks = toList $ sel c s
                 selId = id
                 inserts = sequence $ map (\b-> insertBlob (toBlob b) m) chunks
                 mMapNIds = foldr (\(m, h) (m', hs) -> (m <> m', h:hs)) (empty, []) <$> inserts
                 mMap = fmap fst mMapNIds
-IdList . snd) mMapNIds
+                mContent = fmap (toIdList . snd) mMapNIds
 
 -- | Takes an id/key/hash and a 'Selection'; fetches the id's attached
 -- 'Content' and if its a 'Blob' then calls 'selectFromBlob', otherwise
@@ -180,4 +183,51 @@ IdList . snd) mMapNIds
 -- This may be terribly inefficient.
 --select :: (HashAlg alg, HCMContent c) => Digest alg -> Selection -> HCMap alg c -> Maybe (HCMap alg c, Digest alg)
 select id s mapp = undefined
+
+inputSpace = (,,) <$> ["", "pre"] <*> ["", "sel"] <*> ["", "post"]
+rets = map getSelIdx inputSpace
+rs = rights rets
+ls = lefts rets
+
+checkRes (idx, xs) = (xs !! idx) == "sel"
+
+-- | There exist three success cases:
+-- 1. (none, some, some)
+-- 2. (some, some, none)
+-- 3. (some, some, some)
+-- 
+-- The remaining cases each have a custom error message that (hopefully)
+-- clarifies the cause of the failure. See 'SelErr' src comments for examples
+-- of failure cases.
+getSelIdx :: forall c. (Monoid c, Eq c) 
+          => (c, c, c) -> Either [SelErr] (Int, [c])
+getSelIdx (pre, sel, post)
+  | some pre && some sel && some post = Right (1, [pre,sel,post])
+  | none pre && some sel && some post = Right (0, [sel,post])
+  | some pre && none sel && some post = Left [EmptySelInMid]
+  | some pre && some sel && none post = Right (1, [pre, sel])
+  | some pre && none sel && none post = Left [EmptySelAtEnd]
+  | none pre && none sel && some post = Left [EmptySelAtStart]
+  | none pre && some sel && none post = Left [SelEqualsBG]
+  | none pre && none sel && none post = Left [EmptyBG]
+      where some :: c -> Bool
+            some = not . none
+            none = (mempty ==)
+
+data SelErr = NoSelection
+            | EmptySelAtStart -- e.g., ("", "", "hello world")
+            | EmptySelInMid -- e.g., blob: "hello world", sel: 4 4, res: "hell","","o world"
+            | EmptySelAtEnd -- e.g., ("hello world", "", "")
+            | SelEqualsBG -- selection of bg blob and bg blob are the identical
+            | EmptyBG -- the blob from which the selection was created is empty
+    deriving (Eq, Show)
+
+class Show e => NoteErr e where
+    getErr :: e -> e
+
+
+-- | Simple error class with useless stub function as a convenience for
+-- functions that must call subroutines with divergent error types.
+instance NoteErr SelErr where
+    getErr _ = NoSelection
 

@@ -27,6 +27,7 @@ dependencies:
 - bytestring-conversion
 - text
 - memory
+- mtl
 
 library:
   source-dirs: 
