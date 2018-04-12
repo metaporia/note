@@ -98,7 +98,7 @@ replaceBlob hash idl@(AnIdList (IdList ids)) mapp =
       False -> Nothing
     where hashEqHuh = deref mapp hash == (derefIds mapp ids)
 
--- | Given __any__ @'Content.Content' alg c@ instance, 'deref' will return a
+-- | Given __any__ @'Content' alg c@ instance, 'deref' will return a
 -- @'Maybe' c@; a worst case traversal has an arbitrary runtime--O(n) or
 -- worse--due to the n-tree structure of 'HCMap'.
 --
@@ -191,29 +191,44 @@ select id s mapp =
 
 -- | Generates "contextually apropriate" 'Selection''s for each given
 -- @hash :: Digest alg@ and returns a list of @(hash, mSel)@.
+--
+-- TODO:
+-- □ Add cutoff with 'continue', 'classifySel', or 'blobInSel'.
+-- □ Test--but how?  
 genSels :: forall c alg. (Splittable c, HCMContent c, HashAlg alg) =>
     [Digest alg] -> HCMap alg c -> Selection -> [(Digest alg, Maybe Selection)]
-genSels ids mapp s = go ids mapp s (Just 0)
+genSels ids mapp s = go ids mapp (Just s) (Just 0)
     where go [] _ _ _ = [] 
           go (id:ids) m s lastLen = 
               let bLen :: Maybe Int
                   bLen = len <$> (deref m id)
                   s' :: Maybe Selection
-                  s' = pruneSel s <$> lastLen
-                  in (id, s'):(go ids m s bLen)
+                  s' = do
+                      sel' <- s
+                      lastLen' <- lastLen
+                      return (pruneSel sel' lastLen')
+                  in (id, s'):(go ids m s' bLen)
 
 bg = "hello world the" :: T.Text
 (base, h0) = fromJust $ insertBlob (toBlob bg) emptySHA1 
 (mm, h1) = fromJust $ selectFromBlob h0 (Blob bg) (Sel 3 12) base
 (mmm, h2) = fromJust $ selectFromBlobId h1 (Sel 0 5) mm
 
+
 keys = toMap M.keys mmm
 id0 = head keys
 id1 = keys !! 1
 id2 = keys !! 5 
 id3 = keys !! 3
+idl = [id0,id1,id2,id3]
 
-gensels = genSels [id0,id1,id2,id3] mmm (Sel 5 10)
+gensels = genSels idl mmm (Sel 5 10)
+ms = map (\(hash, s) -> selectFromBlobId hash (fromJust s) mmm) gensels
+(m0, i0) = fromJust $ ms !! 0
+(m1, i1) = fromJust $ ms !! 1
+(m2, i2) = fromJust $ ms !! 2
+(m3, i3) = fromJust $ ms !! 3
+classArgs = map (\(h, mS) -> (fromJust mS, fromJust (len <$> (deref mmm h)))) gensels
 
 inputSpace = (,,) <$> ["", "pre"] <*> ["", "sel"] <*> ["", "post"]
 rets = map getSelIdx inputSpace
@@ -288,10 +303,13 @@ classifySel (Sel s e) l
   | s == 0 && e > l = WholePlus
   | lt (0, s, l) && e == l = RightExact
   | lt (0, s, l) && e > l = RightPlus
+  | lt (s, e, 0) = Before
+  | lt (l, s, e) = After
 
 continue :: SelType -> Bool
 continue RightPlus = True
 continue WholePlus = True
+continue After = True
 continue _ = False
 
 blobInSel :: SelType -> Bool
@@ -345,4 +363,6 @@ data SelType = Left'
              | EmptyRight
              | EmptyPlus
              | Mid
+             | Before
+             | After
              deriving (Eq, Show)

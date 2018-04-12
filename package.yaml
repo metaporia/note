@@ -38,16 +38,16 @@ library:
       - Lib
       - HCMap
       - Select
-  other-modules:
-      #      - Select
       - Content
-      - Handle
       - Helpers
       - Blob
       - BlobId
       - IdList
       - IdListId
+  other-modules:
+      #      - Select
         #- HCMap
+      - Handle
 
 
 executables:
