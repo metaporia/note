@@ -96,15 +96,19 @@ instance Selectable T.Text where
 
 class Splittable a where
     splitAt' :: Int -> a -> (a, a)
+    len :: a ->   Int
 
 instance Splittable B.ByteString where
     splitAt' = B.splitAt
+    len = B.length
 
 instance Splittable [a] where
     splitAt' = Prelude.splitAt
+    len = Prelude.length
 
 instance Splittable T.Text where
     splitAt' = T.splitAt
+    len = T.length
 
 class Selectable a where
     sel :: a -> Selection -> (a, a, a)

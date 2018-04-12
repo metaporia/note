@@ -29,7 +29,7 @@ import Data.String (IsString)
 
 import Content
 import Blob
-import Helpers
+import Helpers hiding (len)
 import Select 
 import IdList
 
@@ -57,6 +57,8 @@ instance (Show c, Show alg) => Show (HCMap alg c) where
     show (Map m) = "Map { " ++ m' ++ "}"
         where m' = show $ map showAbbrev (M.toList m)
               showAbbrev (k, v) = (take 7 $ show k, v)
+
+toMap f (Map m) = f m
 
 empty :: HCMap hash c
 empty = Map M.empty
@@ -181,7 +183,37 @@ selectFromBlob' id (Blob c) s m = chunks
 --
 -- This may be terribly inefficient.
 --select :: (HashAlg alg, HCMContent c) => Digest alg -> Selection -> HCMap alg c -> Maybe (HCMap alg c, Digest alg)
-select id s mapp = undefined
+select id s mapp =
+    case lookup mapp id of
+      Just (ABlob b) -> selectFromBlob id b s mapp
+      Just (AnIdList ids) -> Nothing -- genSels is roughly the first call needed
+      Nothing -> Nothing
+
+-- | Generates "contextually apropriate" 'Selection''s for each given
+-- @hash :: Digest alg@ and returns a list of @(hash, mSel)@.
+genSels :: forall c alg. (Splittable c, HCMContent c, HashAlg alg) =>
+    [Digest alg] -> HCMap alg c -> Selection -> [(Digest alg, Maybe Selection)]
+genSels ids mapp s = go ids mapp s (Just 0)
+    where go [] _ _ _ = [] 
+          go (id:ids) m s lastLen = 
+              let bLen :: Maybe Int
+                  bLen = len <$> (deref m id)
+                  s' :: Maybe Selection
+                  s' = pruneSel s <$> lastLen
+                  in (id, s'):(go ids m s bLen)
+
+bg = "hello world the" :: T.Text
+(base, h0) = fromJust $ insertBlob (toBlob bg) emptySHA1 
+(mm, h1) = fromJust $ selectFromBlob h0 (Blob bg) (Sel 3 12) base
+(mmm, h2) = fromJust $ selectFromBlobId h1 (Sel 0 5) mm
+
+keys = toMap M.keys mmm
+id0 = head keys
+id1 = keys !! 1
+id2 = keys !! 5 
+id3 = keys !! 3
+
+gensels = genSels [id0,id1,id2,id3] mmm (Sel 5 10)
 
 inputSpace = (,,) <$> ["", "pre"] <*> ["", "sel"] <*> ["", "post"]
 rets = map getSelIdx inputSpace
@@ -230,3 +262,87 @@ class Show e => NoteErr e where
 instance NoteErr SelErr where
     getErr _ = NoSelection
 
+
+-- | Meant for use when generating id specific 'Selection's, 'pruneSel'
+-- decrements the sIdx and eIdx vals of thhe given 'Selection' by the given
+-- amount. If the subtraction results in an n<0 then n = 0.
+pruneSel :: Selection -> Int -> Selection
+pruneSel sel@(Sel s e) len = 
+    let s' = nat (s - len)
+        e' = nat (e - len)
+        nat n = if n < 0 then 0 else n
+     in Sel s' e'
+
+-- Determines, given 'Selection' @s@ and an a 'Blob''s content @c@'s length @l@, what kind of selection 
+-- @sel c s@ would generate.
+classifySel :: Selection -> Int -> SelType
+classifySel (Sel s e) l
+  | l == 0 = EmptyBlob
+  | lt (0, s, l) && lt (s, e, l) = Mid
+  | s == 0 && lt (s, e, l) = Left'
+  | s > l && s == e = EmptyPlus
+  | s == e && e == 0 = EmptyLeft
+  | s == e && s < l = EmptyMid
+  | s == e && e == l = EmptyRight
+  | s == 0 && e == l = WholeExact
+  | s == 0 && e > l = WholePlus
+  | lt (0, s, l) && e == l = RightExact
+  | lt (0, s, l) && e > l = RightPlus
+
+continue :: SelType -> Bool
+continue RightPlus = True
+continue WholePlus = True
+continue _ = False
+
+blobInSel :: SelType -> Bool
+blobInSel Left' = True
+blobInSel RightPlus = True
+blobInSel RightExact = True
+blobInSel WholeExact = True
+blobInSel Mid = True
+blobInSel _ = False
+
+needsSelect :: SelType -> Bool
+needsSelect Left' = True
+needsSelect RightPlus = True
+needsSelect RightExact = True
+needsSelect Mid = True
+needsSelect _ = False
+
+
+
+sels = [Sel 0 0, Sel 3 3, Sel 5 5, Sel 7 7, Sel 0 5, Sel 0 7, Sel 3 5, Sel 3 7, Sel 0 3, Sel 0 8]
+bLen = 5
+
+
+lt :: Ord c => (c, c, c) -> Bool
+lt (x, y, z) = x < y && y < z
+
+gt :: Ord c => (c, c, c) -> Bool
+gt (x, y, z) = x > y && y > z
+
+lessThan :: Ord c => [c] -> Bool
+lessthan [] = False
+lessThan (x:xs) = go x xs
+    where go _ [] = True
+          go w (x:xs) = (w < x) && (go x xs)
+
+greaterThan :: Ord c => [c] -> Bool
+greaterThan [] = False
+greaterThan (x:xs) = go x xs
+    where go _ [] = True
+          go w (x:xs) = (w > x) && (go x xs)
+
+  
+data SelType = Left'
+             | EmptyBlob
+             | RightPlus
+             | RightExact
+             | WholePlus
+             | WholeExact
+             | EmptyLeft
+             | EmptyMid
+             | EmptyRight
+             | EmptyPlus
+             | Mid
+             deriving (Eq, Show)
