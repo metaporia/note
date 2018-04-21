@@ -15,7 +15,7 @@ import Content
 import Data.Maybe (fromJust)
 import Prelude hiding (lookup, insert)
 import qualified Data.Text as T
-
+import qualified Data.Text.IO as TIO
 import Select
 
 import Blob
@@ -49,3 +49,34 @@ mapp' = fromJust $ selectFromBlobId i (Sel 4 8) n
 --t = sel "hello world" (Sel 3 8) :: (T.Text, T.Text, T.Text)
 -- selectFrobBlob
 --ret = selectFromBlob hash (fromJust (lookup m hash)) (Sel 3 8) m
+
+-- insertBlob
+--
+newtype HCMap' alg c = Map' { hcmap' :: M.Map (Key alg) (Content' alg c) } deriving (Eq)
+
+tm = emptySHA1
+f = TIO.readFile "specificity.md"
+blob :: IO (Content' SHA1 T.Text)
+blob = do
+    b <- TIO.readFile "specificity.md"
+    return $ toBlob' b
+
+toBlob' :: c -> Content' alg c
+toBlob' c = Blob' c
+
+insertBlob' :: forall alg c. (HashAlg alg, HCMContent c)
+            => Content' alg c -> HCMap' alg c -> Maybe (HCMap alg c, Key alg)
+insertBlob' val m =
+    let key :: Key alg
+        key = hash (toByteString' val)
+        m' :: M.Map (Key alg) (Content' alg c)
+        m' = M.insert key val (hcmap' m)
+     in undefined
+
+
+type Key = Digest
+
+data Content' alg c = Blob' c
+                    | ASpan' (Key alg) Selection
+                    deriving (Eq, Show)
+
