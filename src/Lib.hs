@@ -5,7 +5,6 @@ module Lib
     ) where
 
 import qualified Data.Map as M
-import HCMap
 import Crypto.Hash --(SHA1, hash, hashWith)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
@@ -17,10 +16,51 @@ import Prelude hiding (lookup, insert)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Select
+import Helpers (Key)
+import Map
 
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
+
+-- slice refactor testing
+tm = emptySHA1
+m' :: (Map SHA1 T.Text, Key SHA1)
+m' = insertRawBlob "Hello World!" tm
+(m, k) = m'
+
+s = Sel 3 8
+(tm', k') = fromJust $ insertRawSpan k s m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ---- testing
 --(m, h) = fromJust $ insertBlob (toBlob "hello world" :: Content SHA1 T.Text) emptySHA1
@@ -49,32 +89,4 @@ someFunc = putStrLn "someFunc"
 -- selectFrobBlob
 --ret = selectFromBlob hash (fromJust (lookup m hash)) (Sel 3 8) m
 
--- insertBlob
---
-newtype HCMap' alg c = Map' { hcmap' :: M.Map (Key alg) (Content' alg c) } deriving (Eq)
-
-tm = emptySHA1
-f = TIO.readFile "specificity.md"
-
-blob :: IO (Content' SHA1 T.Text)
-blob = do
-    b <- TIO.readFile "specificity.md"
-    return $ toBlob' b
-
-toBlob' :: c -> Content' alg c
-toBlob' c = Blob' c
-
-insertBlob' :: forall alg c. (HashAlg alg, HCMContent c)
-            => Content' alg c -> HCMap' alg c -> Maybe (HCMap alg c, Key alg)
-insertBlob' val m =
-    let key :: Key alg
-        key = undefined -- hash (toByteString' val)
-        m' :: M.Map (Key alg) (Content' alg c)
-        m' = M.insert key val (hcmap' m)
-     in undefined
-
-
-data Content' alg c = Blob' c
-                    | ASpan' (Key alg) Selection
-                    deriving (Eq, Show)
 

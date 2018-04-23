@@ -25,13 +25,6 @@ import Data.String (IsString)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 
-import Blob
-import BlobId
-import IdList
-import IdListId
-import Handle ()
-import Content
-
 import Helpers
 
 -- | Returns a tuple of, in order, the updated 'CMap' and the 'Handle id' of
