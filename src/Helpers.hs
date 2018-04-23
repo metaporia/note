@@ -1,6 +1,7 @@
 module Helpers where
 
 import Crypto.Hash (Digest)
+import qualified Data.Map as M
 
 type Id = Int
 type Key = Digest
@@ -18,3 +19,4 @@ toList (x, y, z) = x: y: z :[]
 len :: Foldable t => t a -> Int
 len = length
 
+showAbbrev (k, v) = (take 7 $ show k, v)
