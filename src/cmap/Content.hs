@@ -35,3 +35,4 @@ toBlob c = ABlob (Blob c)
 toIdList :: HashAlgorithm alg
          => [Digest alg] -> Content alg c
 toIdList ids = AnIdList $ IdList ids
+

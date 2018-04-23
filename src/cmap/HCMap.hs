@@ -40,7 +40,7 @@ exampleHashWith msg = do
 
 main = exampleHashWith "hello world"
 
-
+type Key = Digest
 newtype HCMap alg c = Map { hcmap :: M.Map (Digest alg) (Content alg c) } deriving (Eq)
 
 type HCMContent c = (Monoid c, Eq c, ToByteString c, Selectable c)

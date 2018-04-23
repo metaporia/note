@@ -113,6 +113,15 @@ instance Splittable T.Text where
 class Selectable a where
     sel :: a -> Selection -> (a, a, a)
 
+getPre :: (a, a, a) -> a
+getPre (a, _, _) = a
+
+getSel :: (a, a, a) -> a
+getSel (_, a, _) = a
+
+getPost :: (a, a, a) -> a
+getPost (_, _, a) = a
+
 updateSel :: Int -> Selection -> Selection
 updateSel idx (Sel s e) = Sel (subBy s idx) (subBy e idx)
 

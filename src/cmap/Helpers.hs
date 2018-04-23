@@ -1,6 +1,9 @@
 module Helpers where
 
+import Crypto.Hash (Digest)
+
 type Id = Int
+type Key = Digest
 
 class Unwrap f where
     unwrap :: f a -> a
