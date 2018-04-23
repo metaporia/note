@@ -1,10 +1,10 @@
 name:                note
 version:             0.1.0.0
-github:              "githubuser/note"
+git:                 "https://bitbucket.org/HelloKitty8/hs-note"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Keane Yahn-Krafft"
+maintainer:          "thisaintforuruse@gmail.com"
+copyright:           "2018 Keane Yahn-Krafft"
 
 extra-source-files:
 - README.md
@@ -27,24 +27,20 @@ dependencies:
 - bytestring-conversion
 - text
 - memory
-- mtl
 
 library:
   source-dirs: 
       - src
       - src/map
+      - src/link
   exposed-modules:
-      #- CMap
+      - Link
       - Lib
       - Val
       - Map
       - Select
       - Helpers
   other-modules:
-      #      - Select
-        #- HCMap
-        #- Handle
-
 
 executables:
   note-exe:

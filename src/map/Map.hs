@@ -1,7 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Map where
+module Map ( Map
+           , MapInternal
+           , MVal, HashAlg
+           , empty, emptySHA1
+           , deref
+           , lookup, insertRawBlob, insertRawSpan
+           ) where
 
 import Val
 
@@ -95,14 +101,5 @@ insertRawSpan k s (Map m) = do
     return (m' m, k')
 
 
-
-
-tm = emptySHA1
-m' :: (Map SHA1 T.Text, Key SHA1)
-m' = insertRawBlob "Hello World!" tm
-(m, k) = m'
-
-s = Sel 3 8
-(tm', k') = fromJust $ insertRawSpan k s m
 
 
