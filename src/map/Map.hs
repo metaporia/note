@@ -86,21 +86,23 @@ emptySHA1 = empty
 -- | For internal use. Takes a blob, lifts it into a 'Val', generates a 'Key',
 -- and inserts (key, val) into 'Map'.
 insertRawBlob :: forall c alg. (MVal c, HashAlg alg)
-              => c -> Map alg c -> (Map alg c, Key alg)
+              => c -> Map alg c -> (Map alg c, Maybe (Key alg))
 insertRawBlob c (Map m) = 
     let val :: Val alg c
         val = mkBlob c 
-     in fromJust $ insert val (Map m)
+     in insert val (Map m)
 
 
 -- | PARTIAL FUNCTION --- BEWARE
 insert :: (MVal c, HashAlg alg)
-           => Val alg c -> Map alg c -> Maybe (Map alg c, Key alg)
+       => Val alg c -> Map alg c -> (Map alg c, Maybe (Key alg))
 insert val@(Blob l c) (Map m) =
     let key = hash (toByteString' c)
         m' = M.insert key val m
-     in Just (Map m', key)
-insert (Span k s) m = insertRawSpan k s m
+     in (Map m', Just key)
+insert (Span k s) m = case insertRawSpan k s m of
+                        Just (m', k') -> (m', Just k')
+                        Nothing -> (m, Nothing)
 
 -- | Applies selection to @deref m k@, hashes result, inserts @(key', Span key
 -- sel)@, and returns the updated map, and the 'Key' of the inserted 'Span'.

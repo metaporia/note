@@ -1,5 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveFunctor #-}
 module Lib
     ( someFunc
     ) where
@@ -11,7 +14,7 @@ import Data.ByteString.Char8 (pack)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteString.Conversion
 --import Content
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, catMaybes)
 import Data.Monoid ((<>))
 import Prelude hiding (lookup, insert, span)
 import qualified Data.Text as T
@@ -23,6 +26,9 @@ import Map hiding (insert, emptySHA1)
 import Link
 import Data.Bifunctor
 import Val
+import Control.Monad.State
+import Control.Monad.Trans.Maybe
+import Data.Functor.Identity
 
 
 someFunc :: IO ()
@@ -30,17 +36,17 @@ someFunc = putStrLn "someFunc"
 
 -- slice refactor testing
 tm = M.emptySHA1
-m' :: (Map SHA1 T.Text, Key SHA1)
+m' :: (Map SHA1 T.Text, Maybe (Key SHA1))
 m' = insertRawBlob "Hello World!" tm
 (m, k) = m'
 
 s = Sel 3 8
-(tm', k') = fromJust $ insertRawSpan k s m
+(tm', k') = fromJust $ insertRawSpan (fromJust k) s m
 
 mapInsert :: [T.Text] -> (Map SHA1 T.Text, [Key SHA1])
 mapInsert xs = 
     let seq = foldr (\(a, b) (as, bs) -> (a:as, b:bs)) ([],[]) 
-        fold' (ms, ks) = (mconcat ms, ks)
+        fold' (ms, ks) = (mconcat ms, catMaybes ks)
      in fold' $ seq $ map (flip insertRawBlob tm) xs
 
 (mpp, subs) = mapInsert 
@@ -98,20 +104,66 @@ l'' = uncurry (insert l') two
 
 -- UI.Vi pre-testing
 f = TIO.readFile "specificity.md"
-v = fmap mkBlob f :: IO (Val SHA1 T.Text)
-v' = do
-    val <- v
-    return $ fromJust $ M.insert val M.empty
-
-span = do
-    (m, k) <- v'
-    return $ mkSpan k userSel0
-
+--v = fmap mkBlob f :: IO (Val SHA1 T.Text)
+--v' = do
+--    val <- v
+--    return $ $ M.insert val M.empty
+--
+--span = do
+--    (m, k) <- v'
+--    return $ mkSpan k userSel0
+--
 userSel0 = Sel 0 178
+--
+--vmap' = do
+--    s <- span
+--    (m, k) <- v'
+--    return $ fromJust $ M.insert s m
+--
+-- StateT :: (s -> m (a, s)) -> StateT s m a
+-- StateT':: (Map alg c-> IO (a, Map alg c)) -> StateT' (Map alg c) IO a
 
-vmap' = do
-    s <- span
-    (m, k) <- v'
-    return $ fromJust $ M.insert s m
-    
+insertFromFile :: FilePath -> MsT (Map SHA1 T.Text) IO (Key SHA1)
+insertFromFile fp = MsT . MaybeT . StateT $ \m -> do
+    f <- TIO.readFile fp
+    let val = mkBlob f
+    return . flipTuple $ M.insert val m
+
+flipTuple :: (a, b) -> (b, a)
+flipTuple (a, b) = (b, a)
+
+vs = insertFromFile "specificity.md"
+
+
+-- (>>=) :: m a -> (a -> m b) -> m b
+--       :: StateT (Map alg c) IO a -> (a -> StateT (Map alg c) IO b) -> StateT (Map alg c) IO b
+--       :: MaybeT (StateT (Map alg c) IO) a
+--       -> (a -> MaybeT (StateT (Map alg c) IO) b)
+--       -> MaybeT (StateT (Map alg c) IO) b
+--
+--MaybeT :: m (Maybe a) -> MaybeT m a
+--
+
+
+insertSpan :: (HashAlg alg, MVal c) 
+           => Selection -> Key alg -> MsT (Map alg c) IO (Key alg)
+insertSpan s k = mkMsT $ \m -> do
+    return . flipTuple $ M.insert (mkSpan k s) m
+
+insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) M.empty
+
+
+newtype MsT s m a = MsT { getMsT :: MaybeT (StateT s m) a }
+    deriving (Functor, Applicative, Monad)
+
+type Ms s a = MsT s Identity a
+
+mkMsT = MsT . MaybeT . StateT
+
+runMs :: MsT s Identity a -> s -> Identity (Maybe a, s)
+runMs mstio = (runStateT . runMaybeT $ getMsT mstio)
+
+runMsT :: MsT s m a -> s -> m (Maybe a, s)
+runMsT mstio = (runStateT . runMaybeT $ getMsT mstio)
+
 

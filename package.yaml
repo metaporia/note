@@ -27,6 +27,8 @@ dependencies:
 - bytestring-conversion
 - text
 - memory
+- mtl
+- transformers
 
 library:
   source-dirs: 
