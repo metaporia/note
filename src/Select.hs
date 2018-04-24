@@ -103,7 +103,7 @@ instance Splittable T.Text where
     splitAt' = T.splitAt
     len = T.length
 
-class Selectable a where
+class Splittable a => Selectable a where
     sel :: a -> Selection -> (a, a, a)
 
 getPre :: (a, a, a) -> a

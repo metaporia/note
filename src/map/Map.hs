@@ -1,3 +1,7 @@
+{-|
+Module: Map
+Description: Provides a wrapper around
+-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,7 +11,14 @@ module Map ( Map
            , empty, emptySHA1
            , deref
            , lookup, insertRawBlob, insertRawSpan
+           , insert
            ) where
+
+-- TODO:
+-- □  Impl 'Map' interface to hide the backend. As persistence will become more
+-- desirable in the late stages of prototyping, we will neeed to insulate those
+-- parts of the internals that can be decoupled from the value-map persistence
+-- logic from unnecessary breakage.
 
 import Val
 
@@ -60,7 +71,7 @@ toMap f (Map m) = f m
 deref :: (HashAlg alg, MVal c)
       => Map alg c -> Key alg -> Maybe c
 deref m k = case lookup m k of
-              Just (Blob b) -> Just b
+              Just (Blob _ b) -> Just b
               Just (Span key sel') -> 
                   deref m key >>= return . getSel . flip sel sel'
               _ -> Nothing
@@ -77,13 +88,19 @@ emptySHA1 = empty
 insertRawBlob :: forall c alg. (MVal c, HashAlg alg)
               => c -> Map alg c -> (Map alg c, Key alg)
 insertRawBlob c (Map m) = 
-    let key :: Key alg
-        key = hash (toByteString' c) 
-        val :: Val alg c
+    let val :: Val alg c
         val = mkBlob c 
-        m' :: MapInternal alg c
-        m' = M.insert key val  m
-     in (Map m', key)
+     in fromJust $ insert val (Map m)
+
+
+-- | PARTIAL FUNCTION --- BEWARE
+insert :: (MVal c, HashAlg alg)
+           => Val alg c -> Map alg c -> Maybe (Map alg c, Key alg)
+insert val@(Blob l c) (Map m) =
+    let key = hash (toByteString' c)
+        m' = M.insert key val m
+     in Just (Map m', key)
+insert (Span k s) m = insertRawSpan k s m
 
 -- | Applies selection to @deref m k@, hashes result, inserts @(key', Span key
 -- sel)@, and returns the updated map, and the 'Key' of the inserted 'Span'.
@@ -100,6 +117,20 @@ insertRawSpan k s (Map m) = do
         m' = Map . M.insert k' (mkSpan k s) 
     return (m' m, k')
 
+-- SelMap
 
+newtype SelMap alg = 
+    SelMap { getSelMap :: M.Map (Key alg) [Key alg] } deriving (Eq, Show)
 
-
+-- | Record the creation of a 'Span' in a 'SelMap' to ensure convenient
+-- lookup of keys which span a given key of some source content.
+--
+-- Returns 'Nothing' if passed a 'Blob' variant of 'Val'. This partiality may
+-- be removed by injectiing newtypes into 'Val' variants so we can match on
+-- variants and write "total" partial functions--ha!
+registerSpanInsertion :: Key alg -> Val alg c->  SelMap alg -> Maybe (SelMap alg)
+registerSpanInsertion spanKey (Span sourceKey s) (SelMap m) = 
+    case M.lookup sourceKey m of
+      Just xs -> Just . SelMap $  M.insert sourceKey (spanKey:xs) m
+      Nothing -> Just . SelMap $ M.insert sourceKey [spanKey] m
+registerSpanInsertion spanKey (Blob _ _) m = Nothing

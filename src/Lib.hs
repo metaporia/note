@@ -8,20 +8,21 @@ import qualified Data.Map as DM
 import Crypto.Hash --(SHA1, hash, hashWith)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
-import Data.ByteArray 
+import Data.ByteArray (ByteArrayAccess)
 import Data.ByteString.Conversion
 --import Content
 import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
-import Prelude hiding (lookup, insert)
+import Prelude hiding (lookup, insert, span)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Select
 import Helpers (Key)
 import qualified Map as M
-import Map hiding (emptySHA1)
+import Map hiding (insert, emptySHA1)
 import Link
 import Data.Bifunctor
+import Val
 
 
 someFunc :: IO ()
@@ -94,3 +95,23 @@ two = (head subKeys, obKeys !! 2)
 
 l' = uncurry (insert le) one
 l'' = uncurry (insert l') two
+
+-- UI.Vi pre-testing
+f = TIO.readFile "specificity.md"
+v = fmap mkBlob f :: IO (Val SHA1 T.Text)
+v' = do
+    val <- v
+    return $ fromJust $ M.insert val M.empty
+
+span = do
+    (m, k) <- v'
+    return $ mkSpan k userSel0
+
+userSel0 = Sel 0 178
+
+vmap' = do
+    s <- span
+    (m, k) <- v'
+    return $ fromJust $ M.insert s m
+    
+

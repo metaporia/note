@@ -40,6 +40,7 @@ library:
       - Map
       - Select
       - Helpers
+      - UI.Vi
   other-modules:
 
 executables:
