@@ -151,10 +151,25 @@ insertSpan s k = mkMsT $ \m -> do
     return . flipTuple $ M.insert (mkSpan k s) m
 
 insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) M.empty
+t' fp sel = insertFromFile fp >>= insertSpan sel
+
+maa = t' "specificity.md" userSel0
+
+g :: Key SHA1 -> MsT (Map SHA1 T.Text) IO (Key SHA1) -> MsT (Map SHA1 T.Text) IO (T.Text) 
+g k mst = do
+    map <- get
+    let m :: Map SHA1 T.Text
+        m = map
+        val :: T.Text
+        val = case lookup m k of
+                Just (Blob _ b) -> b
+                _ -> ""
+
+    return val
 
 
 newtype MsT s m a = MsT { getMsT :: MaybeT (StateT s m) a }
-    deriving (Functor, Applicative, Monad)
+    deriving (Functor, Applicative, Monad, MonadState s)
 
 type Ms s a = MsT s Identity a
 
