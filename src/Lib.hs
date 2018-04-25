@@ -5,9 +5,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Lib
-    ( someFunc
-    ) where
+module Lib where
 
 import Prelude hiding (init, lookup, insert, span)
 
@@ -214,7 +212,7 @@ load' :: (VMVal c, HashAlg alg)
       -> VState alg c (Maybe (Key alg)) --State (VMap alg c) (Maybe (Key alg))
 load' = state . load
 
--- | Like 'load\'', but loads content into empyt map. Use to initialize global
+-- | Like 'load'', but loads content into empyt map. Use to initialize global
 -- state.
 init :: (VMVal c, HashAlg alg) => c -> VState alg c (Maybe (Key alg))
 init  c = StateT $ 
