@@ -9,7 +9,7 @@ Provides
 -}
 module UI.Vi where
 
-import Map
+import VMap
 import Select
 import Helpers (Key)
 import Val
@@ -28,7 +28,7 @@ data ViSel =
 -- | Fetches the 'Key' associated with the content from which the 'CursorPosn'
 -- location was requested. Naturally this requires access to the value maps
 -- under 'Map'
-locate :: Map alg c -> CursorPosn -> Key alg
+locate :: VMap alg c -> CursorPosn -> Key alg
 locate = undefined
 
 
@@ -36,9 +36,9 @@ locate = undefined
 -- selection structure used internally; that is, 'Span', within which a
 -- 'Selection' indexes into a 'Key's blob, treating newlines as totally
 -- unremarkable characters to be given no special treatment.
-fromViSel :: Map alg c -> Key alg -> ViSel -> (Key alg, Selection)
+fromViSel :: VMap alg c -> Key alg -> ViSel -> (Key alg, Selection)
 fromViSel = undefined
 
 
-toViSel :: Map alg c -> Key alg -> Selection -> ViSel
+toViSel :: VMap alg c -> Key alg -> Selection -> ViSel
 toViSel = undefined
