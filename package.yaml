@@ -29,6 +29,7 @@ dependencies:
 - memory
 - mtl
 - transformers
+- raw-strings-qq
 
 library:
   source-dirs: 
