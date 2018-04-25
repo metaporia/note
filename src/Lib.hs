@@ -21,8 +21,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Select
 import Helpers (Key)
-import qualified Map as M
-import Map hiding (insert, emptySHA1)
+import qualified VMap as VM
+import VMap hiding (insert, emptySHA1)
 import Link
 import Data.Bifunctor
 import Val
@@ -35,15 +35,15 @@ someFunc :: IO ()
 someFunc = putStrLn "someFunc"
 
 -- slice refactor testing
-tm = M.emptySHA1
-m' :: (Map SHA1 T.Text, Maybe (Key SHA1))
+tm = VM.emptySHA1
+m' :: (VMap SHA1 T.Text, Maybe (Key SHA1))
 m' = insertRawBlob "Hello World!" tm
 (m, k) = m'
 
 s = Sel 3 8
 (tm', k') = fromJust $ insertRawSpan (fromJust k) s m
 
-mapInsert :: [T.Text] -> (Map SHA1 T.Text, [Key SHA1])
+mapInsert :: [T.Text] -> (VMap SHA1 T.Text, [Key SHA1])
 mapInsert xs = 
     let seq = foldr (\(a, b) (as, bs) -> (a:as, b:bs)) ([],[]) 
         fold' (ms, ks) = (mconcat ms, catMaybes ks)
@@ -121,13 +121,13 @@ userSel0 = Sel 0 178
 --    return $ fromJust $ M.insert s m
 --
 -- StateT :: (s -> m (a, s)) -> StateT s m a
--- StateT':: (Map alg c-> IO (a, Map alg c)) -> StateT' (Map alg c) IO a
+-- StateT':: (VMap alg c-> IO (a, VMap alg c)) -> StateT' (VMap alg c) IO a
 
-insertFromFile :: FilePath -> MsT (Map SHA1 T.Text) IO (Key SHA1)
+insertFromFile :: FilePath -> MsT (VMap SHA1 T.Text) IO (Key SHA1)
 insertFromFile fp = MsT . MaybeT . StateT $ \m -> do
     f <- TIO.readFile fp
     let val = mkBlob f
-    return . flipTuple $ M.insert val m
+    return . flipTuple $ VM.insert val m
 
 flipTuple :: (a, b) -> (b, a)
 flipTuple (a, b) = (b, a)
@@ -136,37 +136,33 @@ vs = insertFromFile "specificity.md"
 
 
 -- (>>=) :: m a -> (a -> m b) -> m b
---       :: StateT (Map alg c) IO a -> (a -> StateT (Map alg c) IO b) -> StateT (Map alg c) IO b
---       :: MaybeT (StateT (Map alg c) IO) a
---       -> (a -> MaybeT (StateT (Map alg c) IO) b)
---       -> MaybeT (StateT (Map alg c) IO) b
+--       :: StateT (VMap alg c) IO a -> (a -> StateT (VMap alg c) IO b) -> StateT (VMap alg c) IO b
+--       :: MaybeT (StateT (VMap alg c) IO) a
+--       -> (a -> MaybeT (StateT (VMap alg c) IO) b)
+--       -> MaybeT (StateT (VMap alg c) IO) b
 --
 --MaybeT :: m (Maybe a) -> MaybeT m a
 --
 
 
-insertSpan :: (HashAlg alg, MVal c) 
-           => Selection -> Key alg -> MsT (Map alg c) IO (Key alg)
+insertSpan :: (HashAlg alg, VMVal c) 
+           => Selection -> Key alg -> MsT (VMap alg c) IO (Key alg)
 insertSpan s k = mkMsT $ \m -> do
-    return . flipTuple $ M.insert (mkSpan k s) m
+    return . flipTuple $ VM.insert (mkSpan k s) m
 
-insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) M.empty
+insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) VM.empty
 t' fp sel = insertFromFile fp >>= insertSpan sel
 
 maa = t' "specificity.md" userSel0
 
-g :: Key SHA1 -> MsT (Map SHA1 T.Text) IO (Key SHA1) -> MsT (Map SHA1 T.Text) IO (T.Text) 
-g k mst = do
-    map <- get
-    let m :: Map SHA1 T.Text
-        m = map
-        val :: T.Text
-        val = case lookup m k of
-                Just (Blob _ b) -> b
-                _ -> ""
-
-    return val
-
+--g :: MsT (Key SHA1, VMap SHA1 T.Text) IO (Key SHA1) -> MsT (VMap SHA1 T.Text) IO (T.Text) 
+--g mst = do
+--    (k, m) <- get
+--    case lookup m k of
+--      Just (Blob _ b) -> return b
+--      _               -> return ""
+--
+mst = insertFromFile "specificity.md"
 
 newtype MsT s m a = MsT { getMsT :: MaybeT (StateT s m) a }
     deriving (Functor, Applicative, Monad, MonadState s)
@@ -181,4 +177,18 @@ runMs mstio = (runStateT . runMaybeT $ getMsT mstio)
 runMsT :: MsT s m a -> s -> m (Maybe a, s)
 runMsT mstio = (runStateT . runMaybeT $ getMsT mstio)
 
+-- | getMstT (x : MsT ...) :: s -> m (Maybe a, s)
+
+-- | getMstT' (x : MsT' ...) :: 
+--
+newtype MsT' s m a = MsT' { getMsT' :: StateT s (MaybeT m) a }
+    deriving (Functor, Applicative, Monad, MonadState s )
+
+-- | Loads the contents of some source file into a 'VMap'. Returns originial
+-- 'VMap' unchanged if the insertion fails.
+load :: (VMVal c, HashAlg alg) 
+     => c
+     -> VMap alg c
+     -> (Maybe (Key alg), VMap alg c)
+load = undefined
 

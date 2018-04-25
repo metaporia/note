@@ -33,13 +33,13 @@ dependencies:
 library:
   source-dirs: 
       - src
-      - src/map
+      - src/vmap
       - src/link
   exposed-modules:
       - Link
       - Lib
       - Val
-      - Map
+      - VMap
       - Select
       - Helpers
       - UI.Vi
@@ -62,7 +62,6 @@ tests:
     source-dirs:         
     - test
     - src
-    - src/cmap
     ghc-options:
     - -threaded
     - -rtsopts
