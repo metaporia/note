@@ -267,6 +267,9 @@ b0 = "This is the end!"
 b1 :: T.Text
 b1 = T.drop 20 "aoeuscarohu arcoeu aorscueh aorsceh aosercuhaosrcuh"
 
+b2' :: T.Text
+b2' = "You hurt me, will not admit responsibility, involvement."
+
 
 -- | Maps shortened key to associated full-length digest.
 data ShortKeys alg c = ShortKeys Int (DM.Map c (Key alg))
@@ -299,10 +302,11 @@ class Abbrev (a :: * -> * -> *) c where
 data Note alg c = 
     Note { getLinks :: Links alg 
          , getVMap :: VMap alg c
+         , getAbbrev :: SelVMap alg
          } deriving (Eq, Show)
 
 newNote :: Note alg c
-newNote = Note Link.empty VM.empty
+newNote = Note Link.empty VM.empty newSelVMap
 
 loadNS :: forall alg c. (VMVal c, HashAlg alg)
       => c
@@ -310,8 +314,9 @@ loadNS :: forall alg c. (VMVal c, HashAlg alg)
 loadNS c = StateT  $ \note -> 
                let vm = getVMap note
                    links = getLinks note
+                   abbrev = getAbbrev note
                    (mK, vm') = runVState (load c) vm
-                in return (mK, Note links vm')
+                in return (mK, Note links vm' abbrev)
 
 
 -- | 'link', but wrapped for convenience in 'StateT (Note alg c) Identity ()'.
@@ -322,7 +327,8 @@ linkNS :: forall alg c. (VMVal c, HashAlg alg)
 linkNS s o = StateT $ \note ->  
     let links = getLinks note
         links' = snd $ runState (link s o) links
-     in return ((), Note links' (getVMap note))
+        abbrev = getAbbrev note
+     in return ((), Note links' (getVMap note) abbrev)
 
 link :: (Linker linker alg, Monoid (linker alg))
         => Subject alg
@@ -345,7 +351,8 @@ st' = StateT $ \note ->
     let (mK, note') = runState (loadNS blob) note
         (mk0, note'') = runState (loadNS spec) note'
         (mK1, note''') = runState (loadNS b0) note''
-        ks = catMaybes [mK, mk0, mK1]
+        (mK2, note'''') = runState (loadNS b2') note'''
+        ks = catMaybes [mK, mk0, mK1, mK2]
         s0 = Subj $ ks !! 0 -- 0 -> 2
         o0 = Obj $ ks !! 0 -- 0 -> 2
         o1 = Obj $ ks !! 1
@@ -353,7 +360,7 @@ st' = StateT $ \note ->
         s2 = Subj $ ks !! 2
         o2 = Obj $ ks !! 2
         lnkd :: State (Note SHA1 T.Text) () 
-        lnkd = linkNS s0 o1 *> linkNS s2 o1 *> linkNS s2 o0
+        lnkd = linkNS s0 o1 *> linkNS s2 o1 *> linkNS s2 o0 *> linkNS (Subj (ks!!3)) o0
         x = runState lnkd note'''
      in return $ runState lnkd note'''
 
@@ -391,6 +398,6 @@ lslnk = putStrLn . pshow . getLinks
 
 
 -- | Pretty much useless.
-lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg) 
+lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg)
       => StateT (Note alg c) IO ()
-lsvmS' = StateT $ \note -> lsvm note >> return ((), note)
+lsvmS' = undefined

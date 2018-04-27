@@ -14,6 +14,7 @@ module VMap ( VMap
             , insert
             , appVM
             , show'
+            , SelVMap, newSelVMap
             ) where
 
 -- TODO:
@@ -146,6 +147,9 @@ insertRawSpan k s (VMap m) = do
 
 newtype SelVMap alg = 
     SelVMap { getSelVMap :: M.Map (Key alg) [Key alg] } deriving (Eq, Show)
+
+newSelVMap :: SelVMap alg 
+newSelVMap = SelVMap M.empty
 
 -- | Record the creation of a 'Span' in a 'SelVMap' to ensure convenient
 -- lookup of keys which span a given key of some source content.

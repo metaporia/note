@@ -46,9 +46,9 @@ data Links alg =
           } deriving (Eq, Show)
 
 pshow :: (HashAlg alg) => Links alg -> String
-pshow (Links from to) = "from Subj to Obj:\n"
+pshow (Links from to) = "*from* Subj to Obj:\n"
                       ++ (go $ M.toList from) 
-                      ++ "\nfrom Obj to Subj:\n"
+                      ++ "\nfrom Obj *to* Subj:\n"
                       ++ (go $ M.toList to) 
     where go [] = []
           go ((k, ks):xs) = take 7 (show k) ++ " -> " 
