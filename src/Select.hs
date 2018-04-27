@@ -88,8 +88,11 @@ instance Selectable T.Text where
     sel = sel'
 
 class Splittable a where
+    {-# MINIMAL splitAt', len #-}
     splitAt' :: Int -> a -> (a, a)
     len :: a ->   Int
+    take' :: Int -> a -> a
+    take' = (fst .) . splitAt'
 
 instance Splittable B.ByteString where
     splitAt' = B.splitAt

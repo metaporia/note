@@ -4,12 +4,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Lib where
 
 import Prelude hiding (init, lookup, insert, span)
 
 import qualified Data.Map as DM
+import qualified Data.Map as M
 import Crypto.Hash --(SHA1, hash, hashWith)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
@@ -32,6 +35,7 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Maybe
 import Data.Functor.Identity
 import Text.RawString.QQ
+import Data.Tuple (swap)
 
 
 someFunc :: IO ()
@@ -97,13 +101,13 @@ obVals = map (hash . toByteString')
 
 subKeys = map Subj $ subVals ["sub1", "two sub", "three sub"]
 obKeys = map Obj $ obVals ["ob1", "two ob", "three ob"]
-link = foldr (\(s, o) m-> insert m s o) Link.empty $ (head subKeys, obKeys !! 2) : zip subKeys obKeys  
+link' = foldr (\(s, o) m-> insert s o m) Link.empty $ (head subKeys, obKeys !! 2) : zip subKeys obKeys  
 
 one = head (zip subKeys obKeys)
 two = (head subKeys, obKeys !! 2)
 
-l' = uncurry (insert le) one
-l'' = uncurry (insert l') two
+l' = uncurry (\s o -> insert s o le) one
+l'' = uncurry (\s o -> insert s o l') two
 
 -- UI.Vi pre-testing
 f = TIO.readFile "specificity.md"
@@ -130,10 +134,7 @@ insertFromFile :: FilePath -> MsT (VMap SHA1 T.Text) IO (Key SHA1)
 insertFromFile fp = MsT . MaybeT . StateT $ \m -> do
     f <- TIO.readFile fp
     let val = mkBlob f
-    return . flipTuple $ VM.insert val m
-
-flipTuple :: (a, b) -> (b, a)
-flipTuple (a, b) = (b, a)
+    return . swap $ VM.insert val m
 
 vs = insertFromFile "specificity.md"
 
@@ -151,7 +152,7 @@ vs = insertFromFile "specificity.md"
 insertSpan :: (HashAlg alg, VMVal c) 
            => Selection -> Key alg -> MsT (VMap alg c) IO (Key alg)
 insertSpan s k = mkMsT $ \m -> do
-    return . flipTuple $ VM.insert (mkSpan k s) m
+    return . swap $ VM.insert (mkSpan k s) m
 
 insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) VM.empty
 t' fp sel = insertFromFile fp >>= insertSpan sel
@@ -181,22 +182,11 @@ runMsT :: MsT s m a -> s -> m (Maybe a, s)
 runMsT mstio = (runStateT . runMaybeT $ getMsT mstio)
 
 -- | getMstT (x : MsT ...) :: s -> m (Maybe a, s)
-
--- | getMstT' (x : MsT' ...) :: 
---
 newtype MsT' s m a = MsT' { getMsT' :: StateT s (MaybeT m) a }
     deriving (Functor, Applicative, Monad, MonadState s )
 
--- | Loads the contents of some source file into a 'VMap'. Returns originial
--- 'VMap' unchanged if the insertion fails.
--- insert
-load :: (VMVal c, HashAlg alg) 
-     => c
-     -> VMap alg c
-     -> (Maybe (Key alg), VMap alg c)
-load c vmap = flipTuple $ insertRawBlob c vmap
-
 -- | 'load' with 'State' -- Should I: 
+--
 --      i. make a transformer that /might/ work for multiple use-cases;
 --
 --     ii. write a product newtype which tuples up a 'VMap', a 'SelMap', and a
@@ -207,20 +197,33 @@ load c vmap = flipTuple $ insertRawBlob c vmap
 type VState alg c a = State (VMap alg c) a
 
 
-load' :: (VMVal c, HashAlg alg)
+runVState :: StateT s Identity a -> s -> (a, s)
+runVState vs = runIdentity . runStateT vs
+
+-- | Loads the contents of some source file into a 'VMap'. Returns originial
+-- 'VMap' unchanged if the insertion fails.
+load :: (VMVal c, HashAlg alg)
       => c
       -> VState alg c (Maybe (Key alg)) --State (VMap alg c) (Maybe (Key alg))
-load' = state . load
+load = state . (swap .) . insertRawBlob 
+-- or, given:
+(.*) = (.) . (.)
+-- then, we have (yay for pointfree code!)
+load' :: (VMVal c, HashAlg alg)
+      => c
+      -> VState alg c (Maybe (Key alg))
+load' = state . (swap .* insertRawBlob)
 
--- | Like 'load'', but loads content into empyt map. Use to initialize global
+
+type VSInternal' = (Maybe (Key SHA1), (VMap SHA1 T.Text))
+-- | Like 'load'', but loads content into empty map. Use to initialize global
 -- state.
-init :: (VMVal c, HashAlg alg) => c -> VState alg c (Maybe (Key alg))
-init  c = StateT $ 
-    \s ->
-        runStateT (load' c) s
+initWith :: (VMVal c, HashAlg alg) => c -> (Maybe (Key alg), VMap alg c)
+initWith  c =  runVState (load c) VM.empty
 
+spec :: T.Text
 spec = [r|
-The specificity of being perks up its over-anthropomorphized head with an
+ specificity of being perks up its over-anthropomorphized head with an
 expression approaching hopeful bewilderment, 'ooh, was that my name? do they
 wanna talk to me? ooh ooh.' Then it notices it's self imposed limits (having
 been made fully human to my mind, it is subject to the same conditions) and
@@ -254,3 +257,140 @@ of protecting the delicate symbiotic balance struck by the various forms of
 existential obfuscation -- it's a defense mechanism after all, except it killed
 him. What does that say about life?
 |]
+
+blob :: T.Text
+blob = "hello world"
+
+b0 :: T.Text
+b0 = "This is the end!"
+
+b1 :: T.Text
+b1 = T.drop 20 "aoeuscarohu arcoeu aorscueh aorsceh aosercuhaosrcuh"
+
+
+-- | Maps shortened key to associated full-length digest.
+data ShortKeys alg c = ShortKeys Int (DM.Map c (Key alg))
+    deriving (Eq, Show)
+
+-- | Interface for key-shortening.
+instance Abbrev ShortKeys T.Text where 
+    abbrev (ShortKeys n m) k =
+        let m' = M.insert (T.pack . take n $ show k) k m
+         in ShortKeys n m'
+    lengthen (ShortKeys n m) t = M.lookup t m
+    newAbbrevStore n = ShortKeys n M.empty
+
+
+class Abbrev (a :: * -> * -> *) c where
+    abbrev :: HashAlg alg 
+           => a alg c -> Key alg -> a alg c
+    lengthen :: HashAlg alg
+             => a alg c -> c -> Maybe (Key alg)
+    newAbbrevStore :: Int -> a alg c
+
+-- The next step, after 'load'--imagine the user has loaded several blobs, which they
+-- would likely next wish to link together. If only they had access to such
+-- an API--seems to be 'link'. (In actuality it would be more likely "show me
+-- the names of the blobs I've loaded", but in any case--)
+
+-- prototype global state structures
+-- main generates the appropriate 'StateT s m a''s for as needed.
+
+data Note alg c = 
+    Note { getLinks :: Links alg 
+         , getVMap :: VMap alg c
+         } deriving (Eq, Show)
+
+newNote :: Note alg c
+newNote = Note Link.empty VM.empty
+
+loadNS :: forall alg c. (VMVal c, HashAlg alg)
+      => c
+      -> StateT (Note alg c) Identity (Maybe (Key alg))
+loadNS c = StateT  $ \note -> 
+               let vm = getVMap note
+                   links = getLinks note
+                   (mK, vm') = runVState (load c) vm
+                in return (mK, Note links vm')
+
+
+-- | 'link', but wrapped for convenience in 'StateT (Note alg c) Identity ()'.
+linkNS :: forall alg c. (VMVal c, HashAlg alg)
+       => Subj alg
+       -> Obj alg
+       -> State (Note alg c) ()
+linkNS s o = StateT $ \note ->  
+    let links = getLinks note
+        links' = snd $ runState (link s o) links
+     in return ((), Note links' (getVMap note))
+
+link :: (Linker linker alg, Monoid (linker alg))
+        => Subject alg
+        -> Object alg
+        -> State (linker alg) ()
+link s o = insert' s o
+
+--init :: State s a 
+initT :: StateT s m a -> s -> m (a, s)
+initT state s = runStateT state s
+
+init :: State s a -> s -> (a, s)
+init state s = runState state s
+
+st :: State (Note SHA1 T.Text) (Maybe (Key SHA1))
+st = loadNS blob *> loadNS spec *> loadNS "This is the end!"
+
+st' :: State (Note SHA1 T.Text) ()
+st' = StateT $ \note -> 
+    let (mK, note') = runState (loadNS blob) note
+        (mk0, note'') = runState (loadNS spec) note'
+        (mK1, note''') = runState (loadNS b0) note''
+        ks = catMaybes [mK, mk0, mK1]
+        s0 = Subj $ ks !! 0 -- 0 -> 2
+        o0 = Obj $ ks !! 0 -- 0 -> 2
+        o1 = Obj $ ks !! 1
+        s1 = Subj $ ks !! 1
+        s2 = Subj $ ks !! 2
+        o2 = Obj $ ks !! 2
+        lnkd :: State (Note SHA1 T.Text) () 
+        lnkd = linkNS s0 o1 *> linkNS s2 o1 *> linkNS s2 o0
+        x = runState lnkd note'''
+     in return $ runState lnkd note'''
+
+-- 0 -> 1
+-- 2 -> 1
+-- 2  -> 0
+
+-- loadNS blob >>= 
+-- linkr :: Key alg -> Key alg -> StateT (Note SHA1 T.Text) ()
+loadThenLink :: State (Note SHA1 T.Text) (Maybe (Key SHA1))
+        -> State (Note SHA1 T.Text) (Maybe (Key SHA1))
+        -> State (Note SHA1 T.Text) ()
+loadThenLink s0 s1 = 
+    StateT $ \note -> 
+        let x :: a
+            x = undefined
+         in undefined
+        
+
+
+(mK', note) = init st' newNote
+vmap = getVMap note
+lnkr = getLinks note
+--ks = appVM M.keys vmap
+--k0 = ks !! 0
+--k1 = ks !! 1
+--k2 = ks !! 2
+
+-- | Pretty-print 'VMap'
+lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
+lsvm = putStrLn . show' . getVMap
+
+lslnk :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
+lslnk = putStrLn . pshow . getLinks
+
+
+-- | Pretty much useless.
+lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg) 
+      => StateT (Note alg c) IO ()
+lsvmS' = StateT $ \note -> lsvm note >> return ((), note)

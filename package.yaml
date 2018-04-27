@@ -30,6 +30,7 @@ dependencies:
 - mtl
 - transformers
 - raw-strings-qq
+- byteable
 
 library:
   source-dirs: 

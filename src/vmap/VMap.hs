@@ -12,6 +12,8 @@ module VMap ( VMap
             , deref
             , lookup, insertRawBlob, insertRawSpan
             , insert
+            , appVM
+            , show'
             ) where
 
 -- TODO:
@@ -39,6 +41,8 @@ import Data.Monoid ((<>))
 import Data.Maybe (fromJust)
 
 import Crypto.Hash
+--import Crypto.Hash.Types 
+import Data.Byteable (toBytes, Byteable)
 import Select
 import Helpers (Key)
 
@@ -61,8 +65,28 @@ instance (Show c, Show alg) => Show (VMap alg c) where
         where m' = show $ map showAbbrev (M.toList m)
               showAbbrev (k, v) = (take 7 $ show k, v)
 
+
+show' :: forall alg c. (HashAlg alg, Show c, Show alg) 
+      => VMap alg c -> String
+show' (VMap m) = "VMap:\n" ++  ( go $ M.toList m)
+    where go :: [(Key alg, Val alg c)] -> String
+          go [] = []
+          go ((k, v):xs) = take 7 (show k) ++ " -> " 
+                        ++ take 35 v' ++ rest
+                        ++ "\n"
+                        ++ go xs
+                            where l = length v'
+                                  v' = show v
+                                  rest = if l > 35
+                                            then "..."
+                                            ++ drop (l - 35) v'
+                                            else ""
+
 empty :: VMap alg c
 empty = VMap M.empty
+
+appVM :: (M.Map (Key alg) (Val alg c) -> a) -> VMap alg c -> a
+appVM f (VMap m) = f m
 
 toVMap :: (M.Map (Key alg) (Val alg c) -> a) -> VMap alg c -> a
 toVMap f (VMap m) = f m

@@ -10,14 +10,25 @@ import qualified Data.Map as M
 import Data.Monoid ((<>))
 import Helpers (Key, showAbbrev)
 import Data.Bifunctor (bimap)
+import Control.Monad.State
+import Data.Functor.Identity
+import VMap (HashAlg)
 -- TODO: 
 -- ▣  getLinksTo :: Links -> Subj alg -> Obj alg 
 
 -- | Unfortunately, since 'Map' is parametric over all @'HashAlg' alg => alg@
 -- the @alg@ parameter is (unavoidably?) visible even here within the 'Link'
 -- interface.
-newtype Subj alg = Subj { getSubj :: Key alg} deriving (Eq, Ord, Show)
-newtype Obj alg = Obj { getObj :: Key alg} deriving (Eq, Ord, Show)
+newtype Subj alg = Subj { getSubj :: Key alg} deriving (Eq, Ord)
+
+instance Show (Subj alg) where
+    show (Subj k) = take 7 $ show k
+
+newtype Obj alg = Obj { getObj :: Key alg} deriving (Eq, Ord)
+
+instance Show (Obj alg) where
+    show (Obj k) = take 7 $ show k
+
 
 -- | Like a bimap, but instead of mapping @a -> b@, and @b -> a@
 -- 'Links' maps @a -> [b]@, and @b -> [a]@. 
@@ -33,6 +44,19 @@ data Links alg =
             -- | links from 'Obj' /to/ 'Subj', i.e., obj -> subj
           , getTo :: M.Map (Obj alg) [Subj alg]
           } deriving (Eq, Show)
+
+pshow :: (HashAlg alg) => Links alg -> String
+pshow (Links from to) = "from Subj to Obj:\n"
+                      ++ (go $ M.toList from) 
+                      ++ "\nfrom Obj to Subj:\n"
+                      ++ (go $ M.toList to) 
+    where go [] = []
+          go ((k, ks):xs) = take 7 (show k) ++ " -> " 
+                        ++ (show $ map (take 7 . show) ks)
+                        ++ "\n"
+                        ++ go xs
+
+
 
 instance Monoid (Links alg) where
     mempty = Links mempty mempty
@@ -73,13 +97,19 @@ class Linker (linker :: * -> *) alg where
     -- | Insert biderectional link (which still preserves the "primary" direction;
     -- that is, that of 'Subject' to 'Object') from 'Subject' to 'Object'.
     insert :: Monoid (linker alg) 
-           => linker alg
-           -> Subject alg
+           => Subject alg
            -> Object alg
            -> linker alg
-    insert linker subj obj = 
+           -> linker alg
+    insert subj obj linker = 
         let lfrom = insertFrom linker subj obj
          in insertTo lfrom obj subj
+
+    insert' :: Monoid (linker alg)
+            => Subject alg
+            -> Object alg
+            -> StateT (linker alg) Identity ()
+    insert' subj obj = state $ \s -> ((), insert subj obj s)
 
 instance Linker Links alg where
     type Subject alg = Subj alg
