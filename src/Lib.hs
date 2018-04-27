@@ -413,7 +413,9 @@ k0 = ks !! 0
 k1 = ks !! 1
 k2 = ks !! 2
 k3 = ks !! 3
-(mk', note') = init (linkAbbrevNS "d47d5d4" "ed464c0") note
+(mk', note') = init (  linkAbbrevNS "d47d5d4" "ed464c0" 
+                    *> aliasAbbrevNS "spec" "d47d5d4"
+                    ) note
 
 -- | Pretty-print 'VMap'
 lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
@@ -462,7 +464,19 @@ aliasNS a k = state $
     \(Note lnk vm abbr selvm) ->
         let (_, abbr') = runState (alias a k) abbr
          in ((), Note lnk vm abbr' selvm)
-
+        
+-- | Returns False if abbrev lookup fails.
+aliasAbbrevNS :: T.Text
+              -> T.Text
+              -> State (Note SHA1 T.Text) Bool
+aliasAbbrevNS alias' abbrev = state $
+    \n@(Note lnk vm abbr selvm) ->
+        let mK = lengthen abbr abbrev
+            abbr' k = snd $ runState (alias alias' k) abbr
+         in case mK of
+              Just k -> (True, Note lnk vm (abbr' k) selvm)
+              Nothing -> (False, n)
+    
 
 
 
