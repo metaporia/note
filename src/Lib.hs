@@ -476,7 +476,4 @@ aliasAbbrevNS alias' abbrev = state $
          in case mK of
               Just k -> (True, Note lnk vm (abbr' k) selvm)
               Nothing -> (False, n)
-    
-
-
 
