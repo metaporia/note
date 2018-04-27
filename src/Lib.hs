@@ -272,7 +272,7 @@ b2' = "You hurt me, will not admit responsibility, involvement."
 
 
 -- | Maps shortened key to associated full-length digest.
-data ShortKeys alg c = ShortKeys Int (DM.Map c (Key alg))
+data ShortKeys alg c = ShortKeys Int (M.Map c (Key alg))
     deriving (Eq, Show)
 
 newShortKeys n = ShortKeys n M.empty
@@ -284,7 +284,7 @@ instance Abbrev ShortKeys T.Text where
             abbrev = T.pack . take n $ show k
          in (abbrev, ShortKeys n m')
     lengthen  t = state $ \s@(ShortKeys n m) -> (M.lookup t m, s)
-    newAbbrevStore = put . newShortKeys 
+    newAbbrevStore = newShortKeys 
 
 
 class Abbrev (a :: * -> * -> *) c where
@@ -292,7 +292,7 @@ class Abbrev (a :: * -> * -> *) c where
            => Key alg -> State (a alg c) c
     lengthen :: HashAlg alg
              => c -> State (a alg c) (Maybe (Key alg))
-    newAbbrevStore :: Int -> State (a alg c) ()
+    newAbbrevStore :: Int -> a alg c 
 
 -- The next step, after 'load'--imagine the user has loaded several blobs, which they
 -- would likely next wish to link together. If only they had access to such
@@ -305,11 +305,12 @@ class Abbrev (a :: * -> * -> *) c where
 data Note alg c = 
     Note { getLinks :: Links alg 
          , getVMap :: VMap alg c
-         , getAbbrev :: SelVMap alg
+         , getAbbrev :: ShortKeys alg T.Text
+         , getSelVMap :: SelVMap alg
          } deriving (Eq, Show)
 
 newNote :: Note alg c
-newNote = Note Link.empty VM.empty newSelVMap
+newNote = Note Link.empty VM.empty (newAbbrevStore 7) newSelVMap
 
 loadNS :: forall alg c. (VMVal c, HashAlg alg)
       => c
@@ -319,7 +320,7 @@ loadNS c = StateT  $ \note ->
                    links = getLinks note
                    abbrev = getAbbrev note
                    (mK, vm') = runVState (load c) vm
-                in return (mK, Note links vm' abbrev)
+                in return (mK, Note links vm' abbrev (getSelVMap note))
 
 
 -- | 'link', but wrapped for convenience in 'StateT (Note alg c) Identity ()'.
@@ -331,7 +332,7 @@ linkNS s o = StateT $ \note ->
     let links = getLinks note
         links' = snd $ runState (link s o) links
         abbrev = getAbbrev note
-     in return ((), Note links' (getVMap note) abbrev)
+     in return ((), Note links' (getVMap note) abbrev (getSelVMap note))
 
 link :: (Linker linker alg, Monoid (linker alg))
         => Subject alg
@@ -387,10 +388,11 @@ loadThenLink s0 s1 =
 (mK', note) = init st' newNote
 vmap = getVMap note
 lnkr = getLinks note
---ks = appVM M.keys vmap
---k0 = ks !! 0
---k1 = ks !! 1
---k2 = ks !! 2
+abbrev' = getAbbrev note
+ks = appVM M.keys vmap
+k0 = ks !! 0
+k1 = ks !! 1
+k2 = ks !! 2
 
 -- | Pretty-print 'VMap'
 lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
