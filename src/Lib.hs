@@ -283,6 +283,9 @@ instance Abbrev ShortKeys T.Text where
         let m' = M.insert abbrev k m
             abbrev = T.pack . take n $ show k
          in (abbrev, ShortKeys n m')
+    alias a k = state $ \(ShortKeys n m) ->
+        let m' = M.insert a k m
+         in ((), ShortKeys n m')
     lengthen  (ShortKeys n m) t = M.lookup t m
     newAbbrevStore = newShortKeys 
 
@@ -297,6 +300,8 @@ instance Abbrev ShortKeys T.Text where
 class Abbrev (a :: * -> * -> *) c where
     abbrev :: HashAlg alg 
            => Key alg -> State (a alg c) c
+    alias :: HashAlg alg
+          => c -> Key alg -> State (a alg c) ()
     lengthen :: HashAlg alg
              => a alg c  -> c -> Maybe (Key alg)
     newAbbrevStore :: Int -> a alg c 
@@ -448,6 +453,15 @@ abbrevNS k = state $
     \(Note lnk vm abbr selvm) ->
         let (shortened, abbr') = runState (abbrev k) abbr
          in (shortened, Note lnk vm abbr' selvm)
+
+aliasNS :: VMVal c
+        => T.Text
+        -> Key SHA1
+        -> State (Note SHA1 c) ()
+aliasNS a k = state $ 
+    \(Note lnk vm abbr selvm) ->
+        let (_, abbr') = runState (alias a k) abbr
+         in ((), Note lnk vm abbr' selvm)
 
 
 
