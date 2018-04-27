@@ -19,7 +19,7 @@ import Data.ByteString.Char8 (pack)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteString.Conversion
 --import Content
-import Data.Maybe (fromJust, catMaybes)
+import Data.Maybe (isJust, fromJust, catMaybes)
 import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -283,15 +283,22 @@ instance Abbrev ShortKeys T.Text where
         let m' = M.insert abbrev k m
             abbrev = T.pack . take n $ show k
          in (abbrev, ShortKeys n m')
-    lengthen  t = state $ \s@(ShortKeys n m) -> (M.lookup t m, s)
+    lengthen  (ShortKeys n m) t = M.lookup t m
     newAbbrevStore = newShortKeys 
 
+--instance Abbrev Note T.Text where
+--    abbrev k = state $ 
+--        \(Note lnk vmap abbr svmap) -> 
+--            let (shortened, abbr') = runState (abbrev k) abbr
+--             in (shortened, Note lnk vmap abbr' svmap)
+--    lengthen n@(Note lnk vmap abbr svmap) c = lengthen abbr c
+--    newAbbrevStore = const newNote
 
 class Abbrev (a :: * -> * -> *) c where
     abbrev :: HashAlg alg 
            => Key alg -> State (a alg c) c
     lengthen :: HashAlg alg
-             => c -> State (a alg c) (Maybe (Key alg))
+             => a alg c  -> c -> Maybe (Key alg)
     newAbbrevStore :: Int -> a alg c 
 
 -- The next step, after 'load'--imagine the user has loaded several blobs, which they
@@ -305,7 +312,7 @@ class Abbrev (a :: * -> * -> *) c where
 data Note alg c = 
     Note { getLinks :: Links alg 
          , getVMap :: VMap alg c
-         , getAbbrev :: ShortKeys alg T.Text
+         , getAbbrev :: ShortKeys alg T.Text 
          , getSelVMap :: SelVMap alg
          } deriving (Eq, Show)
 
@@ -385,7 +392,14 @@ loadThenLink s0 s1 =
         
 
 
-(mK', note) = init st' newNote
+(mK', note) = init (st' 
+                *> abbrevNS k0 
+                *> abbrevNS k1 
+                *> abbrevNS k2 
+                *> abbrevNS k3
+                *> loadNS b2' 
+                ) newNote
+
 vmap = getVMap note
 lnkr = getLinks note
 abbrev' = getAbbrev note
@@ -393,6 +407,8 @@ ks = appVM M.keys vmap
 k0 = ks !! 0
 k1 = ks !! 1
 k2 = ks !! 2
+k3 = ks !! 3
+(mk', note') = init (linkAbbrevNS "d47d5d4" "ed464c0") note
 
 -- | Pretty-print 'VMap'
 lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
@@ -408,4 +424,31 @@ lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg)
 lsvmS' = undefined
 
 -- | 'Abbrev'/'State' wrapper.
+-- returns False if the it fails to load either full-length 'Key'.
+linkAbbrevNS :: forall c. (VMVal c)
+             => T.Text -- c is the shortened 'Key'.
+             -> T.Text
+             -> State (Note SHA1 c) Bool
+linkAbbrevNS s o = state $ \note -> 
+    let abbr = getAbbrev note
+        tup = case (lengthen abbr s, lengthen abbr o) of
+                (Just ks, Just ko) -> Just (ks, ko)
+                (_, _) -> Nothing
+     in if isJust tup 
+           then let (sk, ok) = fromJust tup
+                    (_, note') = runState (linkNS (Subj sk) (Obj ok)) note
+                 in (True, note')
+           else (False, note)
+
+-- | Adds new @abbrev -> full-length@ key entry to the given 'Note''s 'Abbrev'.
+abbrevNS :: VMVal c 
+         => Key SHA1
+         -> State (Note SHA1 c) T.Text
+abbrevNS k = state $ 
+    \(Note lnk vm abbr selvm) ->
+        let (shortened, abbr') = runState (abbrev k) abbr
+         in (shortened, Note lnk vm abbr' selvm)
+
+
+
 
