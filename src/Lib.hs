@@ -275,21 +275,24 @@ b2' = "You hurt me, will not admit responsibility, involvement."
 data ShortKeys alg c = ShortKeys Int (DM.Map c (Key alg))
     deriving (Eq, Show)
 
+newShortKeys n = ShortKeys n M.empty
+
 -- | Interface for key-shortening.
 instance Abbrev ShortKeys T.Text where 
-    abbrev (ShortKeys n m) k =
-        let m' = M.insert (T.pack . take n $ show k) k m
-         in ShortKeys n m'
-    lengthen (ShortKeys n m) t = M.lookup t m
-    newAbbrevStore n = ShortKeys n M.empty
+    abbrev  k = state $ \(ShortKeys n m) -> 
+        let m' = M.insert abbrev k m
+            abbrev = T.pack . take n $ show k
+         in (abbrev, ShortKeys n m')
+    lengthen  t = state $ \s@(ShortKeys n m) -> (M.lookup t m, s)
+    newAbbrevStore = put . newShortKeys 
 
 
 class Abbrev (a :: * -> * -> *) c where
     abbrev :: HashAlg alg 
-           => a alg c -> Key alg -> a alg c
+           => Key alg -> State (a alg c) c
     lengthen :: HashAlg alg
-             => a alg c -> c -> Maybe (Key alg)
-    newAbbrevStore :: Int -> a alg c
+             => c -> State (a alg c) (Maybe (Key alg))
+    newAbbrevStore :: Int -> State (a alg c) ()
 
 -- The next step, after 'load'--imagine the user has loaded several blobs, which they
 -- would likely next wish to link together. If only they had access to such
@@ -401,3 +404,6 @@ lslnk = putStrLn . pshow . getLinks
 lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg)
       => StateT (Note alg c) IO ()
 lsvmS' = undefined
+
+-- | 'Abbrev'/'State' wrapper.
+
