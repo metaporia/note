@@ -32,6 +32,7 @@ dependencies:
 - raw-strings-qq
 - byteable
 - trifecta
+- network
   #- split
 
 library:
@@ -47,6 +48,7 @@ library:
       - Select
       - Helpers
       - UI.Vi
+      - UI.Service
       - Note
       - Abbrev
   other-modules:
