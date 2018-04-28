@@ -416,6 +416,7 @@ k3 = ks !! 3
 (mk', note') = init (  linkAbbrevNS "d47d5d4" "ed464c0" 
                     *> aliasAbbrevNS "spec" "d47d5d4"
                     ) note
+liamRunThis = lsvm note' *> lslnk note'
 
 -- | Pretty-print 'VMap'
 lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
