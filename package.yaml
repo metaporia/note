@@ -47,6 +47,8 @@ library:
       - Select
       - Helpers
       - UI.Vi
+      - Note
+      - Abbrev
   other-modules:
 
 executables:
