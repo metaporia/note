@@ -15,6 +15,9 @@ module VMap ( VMap
             , appVM
             , show'
             , SelVMap, newSelVMap
+            , registerSpanInsertion
+            , pprintSVM
+            , locateIdx
             ) where
 
 -- TODO:
@@ -39,7 +42,8 @@ import Data.ByteString.Conversion
 import Data.String (IsString)
 
 import Data.Monoid ((<>))
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, catMaybes)
+import Data.List (sortBy)
 
 import Crypto.Hash
 --import Crypto.Hash.Types 
@@ -143,10 +147,22 @@ insertRawSpan k s (VMap m) = do
         m' = VMap . M.insert k' (mkSpan k s) 
     return (m' m, k')
 
+
 -- SelVMap
 
 newtype SelVMap alg = 
     SelVMap { getSelVMap :: M.Map (Key alg) [Key alg] } deriving (Eq, Show)
+
+pprintSVM :: (HashAlg alg) 
+          => SelVMap alg -> String
+pprintSVM (SelVMap m) = "SelVMap\n" ++ (go $ M.toList m)
+    where go [] = []
+          go ((k, ks):xs) = take 7 (show k) ++ " -> " 
+                        ++ (show $ map (take 7 . show) ks)
+                        ++ "\n"
+                        ++ go xs
+
+
 
 newSelVMap :: SelVMap alg 
 newSelVMap = SelVMap M.empty
@@ -163,3 +179,44 @@ registerSpanInsertion spanKey (Span sourceKey s) (SelVMap m) =
       Just xs -> Just . SelVMap $  M.insert sourceKey (spanKey:xs) m
       Nothing -> Just . SelVMap $ M.insert sourceKey [spanKey] m
 registerSpanInsertion spanKey (Blob _ _) m = Nothing
+
+
+
+-- | Given the 'Key' of some 'Blob' and an index, return a list of keys sorted
+-- smallest to largest by length.
+-- 
+-- Looks up 
+locateIdx :: (HashAlg alg, VMVal c)
+          => VMap alg c -> SelVMap alg -> Key alg -> Int -> Maybe [Key alg]
+locateIdx vm (SelVMap m) k idx = 
+    case M.lookup k m of
+      Just ks -> let xs = catMaybes $ map (\k -> do
+                           v <- lookup vm k
+                           return (fit' idx v, k)) ks
+                     compare' (i, k) (j, k') = compare i j
+                     sorted = sortBy compare' xs
+                  in Just $ map (\(i, k) -> k) sorted
+      Nothing -> Nothing
+
+
+fit' idx (Blob l _) = l
+fit' idx (Span _ (Sel s e)) = e - s
+-- | Assess the "fit" of a 'Val' w.r.t. a given index, which index is
+-- /relative/ to the blob--it is __not__ a global index.
+-- 
+-- TODO: This "algorithm" desperately needs improvement.
+-- USELESS, a verbose length function
+
+fit :: Int -> Val alg c-> Maybe Int
+fit i (Blob l b) 
+  | i > l = Nothing
+  | i < 0 = Nothing
+  | otherwise = 
+      let (before, after) = (abs i, abs $ l - i)
+       in Just $ before + after
+fit i (Span _ (Sel s e)) = 
+    let (before, after) = (abs i, abs $ (e - s) - i)
+     in Just $ before + after
+
+
+

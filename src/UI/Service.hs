@@ -20,9 +20,9 @@ import Network.Socket.ByteString (send)
 --
 -- * yield keys of currently viewed blob -- name the buffer? keep a dict?
 --
---      - this is kind of trick as there may not be /one/ key for a given
+--      - this is kind of tricky as there may not be /one/ key for a given
 --      stream. perhaps a safe default would be to return the key of the
---      longest val (that is the Blob variants)-- that's it: deref Spans until
+--      longest val (that is, of the Blob variant)--that's it: deref Spans until
 --      a blob is retrieved, then return teh key to that blob. Thus, /any/ key
 --      that references a part of the current content stream should suffice to
 --      identitify the context, right?
@@ -31,7 +31,7 @@ import Network.Socket.ByteString (send)
 --      fits their query.
 --      
 --      - the key(s) of the smallest span around the query cursorPosn should be
---      returned first.
+--      returned first
 --
 -- * alias (abbrev?) keys
 --
@@ -44,7 +44,8 @@ import Network.Socket.ByteString (send)
 -- * preview associated blobs (w abbrev keys)
 --
 --      - this will also be tricky, but more due to the UI limitations of vim
---      coupled with the potentially large number of associated 'Val's.
+--      coupled with the potentially large number of associated 'Val's, than to
+--      some intrinsic property of the data structures involved.
 --
 -- 
 main :: IO ()

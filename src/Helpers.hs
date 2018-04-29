@@ -16,7 +16,4 @@ isNotEmpty _ = True
 toList :: (a, a, a) -> [a]
 toList (x, y, z) = x: y: z :[]
 
-len :: Foldable t => t a -> Int
-len = length
-
 showAbbrev (k, v) = (take 7 $ show k, v)

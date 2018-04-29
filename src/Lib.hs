@@ -23,6 +23,7 @@ import Data.Maybe (isJust, fromJust, catMaybes)
 import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+
 import Select
 import Helpers (Key)
 import qualified VMap as VM
@@ -30,12 +31,15 @@ import VMap hiding (insert, emptySHA1)
 import Link
 import Data.Bifunctor
 import Val
+import UI.Vi 
+
 import Control.Monad.State
 import Control.Monad.State.Class
 import Control.Monad.Trans.Maybe
 import Data.Functor.Identity
 import Text.RawString.QQ
 import Data.Tuple (swap)
+
 
 
 someFunc :: IO ()

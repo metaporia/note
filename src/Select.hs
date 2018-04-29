@@ -17,6 +17,7 @@ module Select where
             --, derefBlobId, toBlob
     --         )
 import Data.List (splitAt, foldl', scanl')
+import Data.List.Split (splitOn)
 import Prelude hiding (lookup, insert)
 import Data.Maybe (fromJust)
 import qualified Data.Map as M
@@ -78,7 +79,7 @@ sel' b (Sel s e) = (pre, sel, post)
           (sel, post) = splitAt' selLen rest
           selLen = e - s
 
-instance Selectable [c] where
+instance Eq c => Selectable [c] where
     sel = sel'
 
 instance Selectable B.ByteString where
@@ -88,23 +89,43 @@ instance Selectable T.Text where
     sel = sel'
 
 class Splittable a where
-    {-# MINIMAL splitAt', len #-}
+    {-# MINIMAL splitAt', len, splitOn', null', empty' #-}
     splitAt' :: Int -> a -> (a, a)
     len :: a ->   Int
     take' :: Int -> a -> a
     take' = (fst .) . splitAt'
+    splitOn' :: a -> a -> [a]
+    empty' :: a
+    null' :: a -> Bool
+ 
 
 instance Splittable B.ByteString where
     splitAt' = B.splitAt
     len = B.length
+    splitOn' cs xs
+      | B.null xs = []
+      | B.null cs = B.singleton (B.head xs) : splitOn' B.empty (B.tail xs)
+      | otherwise = B.split (B.head cs) xs
+    empty' = B.empty
+    null' = B.null
 
-instance Splittable [a] where
+
+
+
+instance Eq a => Splittable [a] where
     splitAt' = Prelude.splitAt
     len = Prelude.length
+    splitOn' = splitOn
+    empty' = []
+    null' = null
 
 instance Splittable T.Text where
     splitAt' = T.splitAt
     len = T.length
+    splitOn' = T.splitOn
+    empty' = T.empty
+    null' = T.null
+
 
 class Splittable a => Selectable a where
     sel :: a -> Selection -> (a, a, a)

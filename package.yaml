@@ -33,7 +33,7 @@ dependencies:
 - byteable
 - trifecta
 - network
-  #- split
+- split
 
 library:
   source-dirs: 

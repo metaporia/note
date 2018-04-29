@@ -29,6 +29,7 @@ import Abbrev
 import Helpers
 import Val
 import Select
+import UI.Vi
 
 
 data Note alg c = 
@@ -82,6 +83,9 @@ lsvm = putStrLn . show' . getVMap
 
 lslnk :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
 lslnk = putStrLn . pshow . getLinks
+
+lssm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
+lssm  = putStrLn . pprintSVM . getSelVMap
 
 
 -- | Pretty much useless.
@@ -146,13 +150,30 @@ insertFromFile fp = MsT . MaybeT . StateT $ \m -> do
 
 userSel0 = Sel 0 178
 
-insertSpan :: (HashAlg alg, VMVal c) 
+insertSpan :: (HashAlg alg, VMVal c)
+           => (Key alg, Selection) -> State (Note alg c) (Maybe (Key alg))
+insertSpan (k, s) = state $ \note@(Note lnk vm abbr sm) -> 
+    case insertRawSpan k s vm of
+      Just (vm', k') -> 
+          let span = mkSpan k s
+           in case registerSpanInsertion k' span sm of
+                Just sm' -> (Just k', Note lnk vm' abbr sm')
+                Nothing -> (Nothing, note)
+      Nothing -> (Nothing, note)
+
+
+
+
+-- 1 insertspan
+-- 2 registerSpanInsertion
+
+insertSpan' :: (HashAlg alg, VMVal c) 
            => Selection -> Key alg -> MsT (VMap alg c) IO (Key alg)
-insertSpan s k = mkMsT $ \m -> do
+insertSpan' s k = mkMsT $ \m -> do
     return . swap $ VM.insert (mkSpan k s) m
 
-insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan sel) VM.empty
-t' fp sel = insertFromFile fp >>= insertSpan sel
+insertFromFileThenInsertSpan fp sel = runMsT (insertFromFile fp >>= insertSpan' sel) VM.empty
+t' fp sel = insertFromFile fp >>= insertSpan' sel
 
 maa = t' "specificity.md" userSel0
 
@@ -323,10 +344,18 @@ k0 = ks !! 0
 k1 = ks !! 1
 k2 = ks !! 2
 k3 = ks !! 3
-(mk', note') = init (  linkAbbrevNS "d47d5d4" "ed464c0" 
+(mks, note') = init (  linkAbbrevNS "d47d5d4" "ed464c0" 
                     *> aliasAbbrevNS "spec" "d47d5d4"
+                    *> insertSpan (k2, Sel 5 7)
+                    *> insertSpan (k2, Sel 1 800)
+                    *> insertSpan (k2, Sel 3 10)
+                    *> locateIdx' k2 4
                     ) note
 
-inspect = lsvm note' *> lslnk note'
+ls note = lsvm note *> lslnk note *> lssm note
 
+locateIdx' :: (HashAlg alg, VMVal c)
+           => Key alg -> Int -> State (Note alg c) (Maybe [Key alg])
+locateIdx' k idx = state $ 
+    \note@(Note lnk vm abbr sm) -> (locateIdx vm sm k idx, note)
 
