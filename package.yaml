@@ -34,6 +34,7 @@ dependencies:
 - trifecta
 - network
 - split
+- aeson
 
 library:
   source-dirs: 
@@ -51,6 +52,7 @@ library:
       - UI.Service
       - Note
       - Abbrev
+      - Parse
   other-modules:
 
 executables:
@@ -63,6 +65,12 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - note
+  note-cli:
+    main:                Main.hs
+    source-dirs:         app/cli
+    dependencies:
+        - note
+        - aeson
 
 tests:
   note-test:

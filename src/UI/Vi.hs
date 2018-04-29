@@ -41,7 +41,7 @@ import Helpers
 import Select
 import Val
 
-s = [r|aoeu
+s' = [r|aoeu
 aoeu
 aoeu
 |]

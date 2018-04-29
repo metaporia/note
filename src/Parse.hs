@@ -118,3 +118,4 @@ newtype AliasLink c = AliasLink (Alias c , Alias c) deriving (Eq, Show)
 
 parseLink :: Parser (AliasLink String)
 parseLink = (AliasLink .) . (,) <$> parseAlias <*> parseSndAlias
+
