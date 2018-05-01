@@ -1,0 +1,98 @@
+let SessionLoad = 1
+let s:so_save = &so | let s:siso_save = &siso | set so=0 siso=0
+let v:this_session=expand("<sfile>:p")
+silent only
+cd ~/hs-note
+if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
+  let s:wipebuf = bufnr('%')
+endif
+set shortmess=aoO
+badd +1 app/cli/Main.hs
+badd +0 src/link/Link.hs
+badd +0 src/UI/Service.hs
+badd +0 src/UI/Vi.hs
+badd +0 src/vmap/Val.hs
+badd +0 src/vmap/VMap.hs
+badd +0 src/Note.hs
+badd +0 src/Lib.hs
+badd +0 src/Select.hs
+badd +0 src/Parse.hs
+badd +0 src/Abbrev.hs
+badd +2 package.yaml
+argglobal
+silent! argdel *
+$argadd app/cli/Main.hs
+$argadd src/link/Link.hs
+$argadd src/UI/Service.hs
+$argadd src/UI/Vi.hs
+$argadd src/vmap/Val.hs
+$argadd src/vmap/VMap.hs
+$argadd src/Note.hs
+$argadd src/Lib.hs
+$argadd src/Select.hs
+$argadd src/Parse.hs
+$argadd src/Abbrev.hs
+edit app/cli/Main.hs
+set splitbelow splitright
+wincmd _ | wincmd |
+split
+1wincmd k
+wincmd w
+set nosplitbelow
+set nosplitright
+wincmd t
+set winminheight=1 winminwidth=1 winheight=1 winwidth=1
+exe '1resize ' . ((&lines * 27 + 28) / 56)
+exe '2resize ' . ((&lines * 26 + 28) / 56)
+argglobal
+if bufexists('/usr/share/nvim/runtime/doc/starting.txt') | buffer /usr/share/nvim/runtime/doc/starting.txt | else | edit /usr/share/nvim/runtime/doc/starting.txt | endif
+setlocal fdm=manual
+setlocal fde=0
+setlocal fmr={{{,}}}
+setlocal fdi=#
+setlocal fdl=0
+setlocal fml=1
+setlocal fdn=20
+setlocal nofen
+silent! normal! zE
+let s:l = 791 - ((1 * winheight(0) + 13) / 27)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+791
+normal! 059|
+wincmd w
+argglobal
+setlocal fdm=manual
+setlocal fde=0
+setlocal fmr={{{,}}}
+setlocal fdi=#
+setlocal fdl=0
+setlocal fml=1
+setlocal fdn=20
+setlocal fen
+silent! normal! zE
+let s:l = 2 - ((1 * winheight(0) + 13) / 26)
+if s:l < 1 | let s:l = 1 | endif
+exe s:l
+normal! zt
+2
+normal! 02|
+wincmd w
+2wincmd w
+exe '1resize ' . ((&lines * 27 + 28) / 56)
+exe '2resize ' . ((&lines * 26 + 28) / 56)
+tabnext 1
+if exists('s:wipebuf') && getbufvar(s:wipebuf, '&buftype') isnot# 'terminal'
+  silent exe 'bwipe ' . s:wipebuf
+endif
+unlet! s:wipebuf
+set winheight=1 winwidth=20 winminheight=1 winminwidth=1 shortmess=filnxtToO
+let s:sx = expand("<sfile>:p:r")."x.vim"
+if file_readable(s:sx)
+  exe "source " . fnameescape(s:sx)
+endif
+let &so = s:so_save | let &siso = s:siso_save
+doautoall SessionLoadPost
+unlet SessionLoad
+" vim: set ft=vim :

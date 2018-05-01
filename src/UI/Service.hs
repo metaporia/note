@@ -1,8 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module UI.Service where
 
-import Network.Socket hiding (send)
-import Network.Socket.ByteString (send)
+import qualified Network.Socket as Sock
+import Network.Socket hiding (sendTo, send, recv)
+import qualified Control.Exception as E
+import Network.Socket.ByteString (send, sendAll, sendTo, recv)
+import qualified Data.ByteString as B
+import System.IO
 
 -- | `note` service: 
 --
@@ -47,9 +51,10 @@ import Network.Socket.ByteString (send)
 --      coupled with the potentially large number of associated 'Val's, than to
 --      some intrinsic property of the data structures involved.
 --
--- 
-main :: IO ()
-main = do
+
+-- server
+server :: IO ()
+server = do
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
     bind sock (SockAddrInet 4242 iNADDR_ANY)
@@ -65,7 +70,51 @@ mainLoop sock = do
 runConn :: (Socket, SockAddr) -> IO ()
 runConn (sock, _) = do
     send sock "Hello\n"
-    close sock
+    handle <- socketToHandle sock ReadMode 
+    hSetBuffering handle NoBuffering
+    let readAll :: Handle -> B.ByteString -> IO B.ByteString
+        readAll h buf = do
+            eof <- hIsEOF h
+            if eof
+               then return buf
+               else (B.hGetLine h)>>= (\bs -> (bs `mappend`) <$> (readAll h ""))
+            
+    msg <- readAll handle ""
+    putStrLn $ show sock ++ " yielded: " ++ show msg
+
+-- client
+open :: HostName -> String -> IO (Socket, SockAddr)
+open host port = do
+    -- host, port lookup. err or nonempty [AddrInfo].
+    addrInfo <- getAddrInfo Nothing 
+                            (Just host)
+                            (Just port)
+    let serverInfo = head addrInfo
+    sock <- socket (addrFamily serverInfo)
+                   (addrSocketType serverInfo)
+                   (addrProtocol serverInfo)
+    
+
+    return (sock, addrAddress serverInfo)
+
+
+client :: IO ()
+client = do
+--    putStrLn "please enter '>host port'"
+--    putStr ">"
+--    ws <- words <$> getLine
+--    let host = ws !! 0
+--        port = ws !! 1
+
+    let host = "127.0.0.1" 
+        port =  "4242"
+    (sock, sockAddr) <- open host port
+    connect sock sockAddr
+    putStrLn $"excellent, now enter the string you would like to send to " ++ host ++ " at "++ port ++"."
+    msg <- B.readFile "specificity.md"
+    bytesSent <- send sock msg
+    putStrLn $ "sent " ++ (show bytesSent) ++  " bytes"
+    return ()
 
 
 

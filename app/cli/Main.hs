@@ -16,6 +16,7 @@ import GHC.Generics
 import Data.Aeson
 
 import Parse
+import UI.Service
 
 parseCmd' :: Parser String
 parseCmd'  = pad' (some letter) 
@@ -54,7 +55,7 @@ parseCusCmd cmdStr nargs =
     <* eof
 
 main :: IO ()
-main = putStrLn "cli"
+main = server
 
 c = try (parseCusCmd "command" 2) <?> "command <arg> <arg>\\n" 
 d = try (parseCusCmd "eal" 3) <?> "eal <arg> <arg> <arg>\\n"
