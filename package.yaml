@@ -35,6 +35,7 @@ dependencies:
 - network
 - split
 - aeson
+- binary
 
 library:
   source-dirs: 

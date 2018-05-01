@@ -311,10 +311,6 @@ st' = StateT $ \note ->
         x = runState lnkd note'''
      in return $ runState lnkd note'''
 
--- 0 -> 1
--- 2 -> 1
--- 2  -> 0
-
 -- loadNS blob >>= 
 -- linkr :: Key alg -> Key alg -> StateT (Note SHA1 T.Text) ()
 loadThenLink :: State (Note SHA1 T.Text) (Maybe (Key SHA1))
@@ -352,10 +348,19 @@ k3 = ks !! 3
                     *> locateIdx' k2 4
                     ) note
 
+lnkr' = getLinks note'
 ls note = lsvm note *> lslnk note *> lssm note
 
 locateIdx' :: (HashAlg alg, VMVal c)
            => Key alg -> Int -> State (Note alg c) (Maybe [Key alg])
 locateIdx' k idx = state $ 
     \note@(Note lnk vm abbr sm) -> (locateIdx vm sm k idx, note)
+
+
+-- Deref 'ShortKey' key @abbr@.
+derefAbbrNS :: (VMVal c, HashAlg alg)
+              => T.Text -> State (Note alg c) (Maybe c)
+derefAbbrNS abbr = state $ 
+    \n@(Note lnk vm ab sm) -> ((lengthen ab abbr) >>= deref vm, n)
+
 
