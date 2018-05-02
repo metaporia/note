@@ -17,6 +17,7 @@ import Control.Monad.Trans.Maybe
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.String (IsString)
 
 import Data.Functor.Identity
 import Data.Maybe (catMaybes, fromJust, isJust)
@@ -242,8 +243,7 @@ initWith :: (VMVal c, HashAlg alg) => c -> (Maybe (Key alg), VMap alg c)
 initWith  c =  runVState (load c) VM.empty
 
 spec :: T.Text
-spec = [r|
- specificity of being perks up its over-anthropomorphized head with an
+spec = [r|The specificity of being perks up its over-anthropomorphized head with an
 expression approaching hopeful bewilderment, 'ooh, was that my name? do they
 wanna talk to me? ooh ooh.' Then it notices it's self imposed limits (having
 been made fully human to my mind, it is subject to the same conditions) and
@@ -340,8 +340,8 @@ k0 = ks !! 0
 k1 = ks !! 1
 k2 = ks !! 2
 k3 = ks !! 3
-(mks, note') = init (  linkAbbrevNS "d47d5d4" "ed464c0" 
-                    *> aliasAbbrevNS "spec" "d47d5d4"
+(mks, note') = init (  linkAbbrevNS "e8163c4" "ed464c0" 
+                    *> aliasAbbrevNS "spec" "e8163c4"
                     *> insertSpan (k2, Sel 5 7)
                     *> insertSpan (k2, Sel 1 800)
                     *> insertSpan (k2, Sel 3 10)
@@ -364,3 +364,12 @@ derefAbbrNS abbr = state $
     \n@(Note lnk vm ab sm) -> ((lengthen ab abbr) >>= deref vm, n)
 
 
+cmds :: (Ord k, IsString k, VMVal c, HashAlg alg) =>  M.Map k (T.Text -> State (Note alg c) (Maybe c))
+cmds = M.fromList [ ("deref", derefAbbrNS) ] -- add number of arguments expected to tuple (threeple, rly).
+
+cmdLookup :: (Ord k, IsString k, VMVal c, HashAlg alg) => k -> T.Text -> Maybe (State (Note alg c) (Maybe c))
+cmdLookup k t = M.lookup k cmds <*> pure t
+
+runWith n state = runState state n
+
+lookupRun cmd abbr note = cmdLookup cmd abbr >>= fst . runWith note

@@ -65,7 +65,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - note
+        - note
   note-cli:
     main:                Main.hs
     source-dirs:         app/cli

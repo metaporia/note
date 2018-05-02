@@ -13,10 +13,12 @@ import Control.Applicative
 import qualified Data.Map as M
 
 import GHC.Generics
-import Data.Aeson
+import Data.Aeson hiding (Result(..))
 
 import Parse
 import UI.Service
+
+import Control.Monad
 
 parseCmd' :: Parser String
 parseCmd'  = pad' (some letter) 
@@ -29,13 +31,15 @@ parseArgAlpha = pad' (some letter)
 parseArgAlphaNum :: Parser String
 parseArgAlphaNum = skipMany (char ' ') *> (some alphaNum)
 
-data Cmd = Cmd T.Text [T.Text] deriving (Eq, Generic, Show)
+parseArgNoneBut :: Parser String
+parseArgNoneBut = skipMany (char ' ') *> (some (noneOf "\n "))
+
 
 parseCmd :: Parser Cmd
 parseCmd = 
     Cmd <$> fmap T.pack parseCmd' 
-        <*> (fmap .fmap) T.pack (many parseArgAlphaNum)
-        <* skip (char '\n')
+        <*> (fmap .fmap) T.pack (many parseArgNoneBut)
+        <* skipMany (char '\n')
 
 parseQuoted :: Parser String
 parseQuoted = skipMany (char ' ')
@@ -75,17 +79,30 @@ data Command = WriteWithQuoted String -- | Write inline blob val.
              deriving (Eq, Show, Generic)
 
 
-instance ToJSON Cmd where
-
-    toJSON (Cmd cmd args) = object [ "type" .= String "command" 
-                                   , "name" .= String cmd
-                                   , "args" .= toJSON args
-                                   ]
-
-    toEncoding = genericToEncoding defaultOptions
-
-instance FromJSON Cmd
-
 cmds = M.empty :: M.Map String Command
 
 cmd = Cmd "load" ["key0", "key1"]
+
+replEcho :: IO ()
+replEcho  = do
+    let loop = do putStr "> "
+                  l <- getLine
+                  case l of
+                    "exit" -> return () 
+                    _ -> case parse parseCmd l of 
+                           Success cmd -> do print cmd
+                                             oas cmd
+                                             loop
+                           _ -> putStrLn l *> loop 
+    loop
+    
+repl = replEcho
+
+parse :: Parser a -> String -> Result a
+parse p s = parseString p mempty s
+
+
+resultToMaybe :: Result a -> Maybe a
+resultToMaybe (Success v) = Just v
+resultToMaybe (Failure _) = Nothing
+

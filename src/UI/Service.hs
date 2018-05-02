@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 module UI.Service where
 
 import qualified Network.Socket as Sock
@@ -8,11 +9,16 @@ import qualified Network.Socket.ByteString.Lazy as NBL (send, sendAll, recv)
 import Network.Socket.ByteString (send, sendAll, recv)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy.Char8 as BLC8
 import Data.ByteString.Conversion
+
+import qualified Data.Text as T
+import GHC.Generics
+
 import System.IO
 
 import Control.Concurrent (forkIO)
-import Control.Monad (forever)
+import Control.Monad (forever, foldM)
 
 import Data.Binary
 import Data.Bits
@@ -20,6 +26,42 @@ import Data.Bits
 import Text.Printf
 
 import Data.Int (Int64)
+import Data.Aeson hiding (encode, decode)
+import qualified Data.Aeson as A
+
+import Data.Maybe (fromJust, fromMaybe)
+
+import Note
+import Control.Monad.State
+
+encode' :: ToJSON a => a -> BL.ByteString
+encode' = A.encode
+
+decode' :: FromJSON a => BL.ByteString -> Maybe a
+decode' = A.decode
+
+
+data Cmd = Cmd T.Text [T.Text] deriving (Eq, Generic, Show)
+
+getCmd :: Cmd -> T.Text
+getCmd (Cmd cmd _) = cmd
+
+getArgs :: Cmd -> [T.Text]
+getArgs (Cmd _ args) = args
+
+cmd = Cmd "cmd" ["arg0", "arg1", "arg2"]
+
+instance ToJSON Cmd where
+
+    toJSON (Cmd cmd args) = object [ "type" .= String "command" 
+                                   , "name" .= String cmd
+                                   , "args" .= toJSON args
+                                   ]
+
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON Cmd
+
 
 -- | `note` service: 
 --
@@ -98,9 +140,26 @@ server = do
                 --      - not yet disproven
                 --
             --contents <- NBL.recv client (fromIntegral len)
-            contents <- recv client (fromIntegral len)
+            contents <- NBL.recv client (fromIntegral len)
             putStrLn $ "received payload of length " ++ show len
-            print contents
+            case (A.decode contents :: Maybe Cmd) of
+              Just cmd -> do BLC8.putStrLn contents 
+                             print cmd
+                             if getCmd cmd == "deref" 
+                                then let s =  show . fst $ runState (derefAbbrNS (getArgs cmd !! 0)) note'
+                                         arg0 = case null (getArgs cmd) of
+                                                    False -> Just $ getArgs cmd !! 0
+                                                    True -> Nothing
+                                         t :: T.Text
+                                         t = case lookupRun (getCmd cmd) (fromMaybe "" arg0) note' of
+                                               Just x -> x
+                                               Nothing -> "Lookup failed"
+                                      in (print $ "abbr derefed. sending\n")
+                                         *> NBL.send client (encode t) *> return ()
+                                else return ()
+              Nothing -> print contents
+            bytes <- NBL.send client . encode $ "ack " `mappend` toByteString' len
+            putStrLn ""
             close client
             --hClose clientHandle 
         
@@ -167,6 +226,37 @@ send' (sock, sockAddr) = do
     return (sock, sockAddr)
 
 
+sendCmd :: (Socket, SockAddr) -> Cmd -> IO ()
+sendCmd (sock, _) cmd = do
+--    putStrLn "please enter '>host port'"
+--    putStr ">"
+--    ws <- words <$> getLine
+--    let host = ws !! 0
+--        port = ws !! 1
+    --     kjj
+    let enc = encode . A.encode
+        sendAll' sock msg = 
+            do bytes <- NBL.send sock msg
+               if bytes < (BL.length msg)
+                  then sendAll' sock (BL.drop bytes msg) 
+                  else return ()
+    sendAll' sock $ enc cmd
+    putStrLn "sent!"
+    let recv'' = do  blen <- NBL.recv sock 8
+                     rest <- NBL.recv sock . fromIntegral $ (decode blen :: Int64)
+                     return rest
+--    first <- recv''
+--    print first
+--    second <- recv''
+--    print second
+    contents <- recvAll sock
+    BLC8.putStrLn contents
+    close sock
+
+oas cmd = do
+    conn <- openAndConn "localhost" "4242"
+    sendCmd conn cmd
+
 -- NB:
 --
 -- > (ntohl . decode . encode . htonl $ l) == l
@@ -176,6 +266,18 @@ pack' payload = encode payload
     -- @ntohl . decode@ on the other side.
 
 
+recvAll :: Socket -> IO BL.ByteString
+recvAll sock = do
+    let go bytes buf = do let bytes' = fromIntegral (decode bytes :: Int64)
+                          rest <- NBL.recv sock bytes'
+                          nextLen <- NBL.recv sock 8
+                          let nextBuf = buf `mappend` rest
+                          if not (BL.null nextLen)
+                             then go nextLen nextBuf
+                             else return nextBuf
+    blen <- NBL.recv sock 8
+    go blen ""
+    
 
 
 unroll :: Word32 -> [Word8]
