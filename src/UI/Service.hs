@@ -4,8 +4,11 @@ module UI.Service where
 import qualified Network.Socket as Sock
 import Network.Socket hiding (sendTo, send, recv)
 import qualified Control.Exception as E
-import Network.Socket.ByteString (send, sendAll, sendTo, recv)
+import qualified Network.Socket.ByteString.Lazy as NBL (send, sendAll, recv)
+import Network.Socket.ByteString (send, sendAll, recv)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import Data.ByteString.Conversion
 import System.IO
 
 import Control.Concurrent (forkIO)
@@ -15,6 +18,8 @@ import Data.Binary
 import Data.Bits
 
 import Text.Printf
+
+import Data.Int (Int64)
 
 -- | `note` service: 
 --
@@ -78,12 +83,26 @@ server = do
     listen sock 10
     forever $ do
         (client, _) <- accept sock
-        clientHandle <- socketToHandle client ReadMode 
-        hSetBuffering clientHandle NoBuffering
+        --clientHandle <- socketToHandle client ReadMode 
+        --hSetBuffering clientHandle NoBuffering
         forkIO $ do
-            contents <- readAll clientHandle "" 
+            blen <- NBL.recv client 8
+            let len = (decode blen :: Int64)
+                -- Why, if I use just 'recv', does the following result in an
+                -- "out of memory" error, and crash?
+                --
+                --  * mixing strict 'n lazy 'ByteString' ? 
+                --      - No--(reversion did not break it)
+                --
+                --  * arcane secret
+                --      - not yet disproven
+                --
+            --contents <- NBL.recv client (fromIntegral len)
+            contents <- recv client (fromIntegral len)
+            putStrLn $ "received payload of length " ++ show len
             print contents
-            hClose clientHandle 
+            close client
+            --hClose clientHandle 
         
 
 readAll :: Handle -> B.ByteString -> IO B.ByteString
@@ -139,19 +158,23 @@ send' (sock, sockAddr) = do
     --     kjj
     msg' <- B.readFile "specificity.md"
     let sendAll' sock msg = 
-            do bytes <- send sock msg
-               if bytes < (B.length msg)
-                  then sendAll' sock (B.drop bytes msg) 
+            do bytes <- NBL.send sock msg
+               if bytes < (BL.length msg)
+                  then sendAll' sock (BL.drop bytes msg) 
                   else return ()
-    sendAll' sock msg'
+    sendAll' sock (pack' msg')
     putStrLn "sent!"
     return (sock, sockAddr)
 
 
-pack :: B.ByteString -> B.ByteString
-pack payload = 
-    let w8s = unroll $ (fromIntegral (B.length payload) :: Word32)
-     in foldr B.cons payload w8s
+-- NB:
+--
+-- > (ntohl . decode . encode . htonl $ l) == l
+--
+pack' :: Binary a => a -> BL.ByteString
+pack' payload = encode payload
+    -- @ntohl . decode@ on the other side.
+
 
 
 
@@ -161,6 +184,31 @@ unroll x = map fromIntegral [ x .&. 0xff
                             , (x .&. 0xff0000) `shiftR` 16 
                             , (x .&. 0xff000000) `shiftR` 24
                             ]
+tuple :: [a] -> (a, a, a, a)
+tuple as = (as !! 0, as!!1,as!!2,as!!3)
+
+roll' = roll . tuple
+
+roll :: (Word8, Word8, Word8, Word8) -> Word32
+roll (w, x, y, z) = let ws :: [Word32]
+                        ws =  [ fromIntegral w
+                              , (fromIntegral x) `shiftL` 8
+                              , (fromIntegral y) `shiftL` 16 
+                              , (fromIntegral z) `shiftL` 24
+                            ]
+                         in foldr (.|.) 0x00000000 $ ws
 
 pbits :: PrintfType r => r
 pbits =  printf "%b\n"
+
+
+encodingExample :: IO ()
+encodingExample = do
+    f <- B.readFile "specificity.md"
+    let l = fromIntegral (B.length f) :: Word32 
+
+    putStrLn $ "l = " ++ show l
+    putStrLn $ "encode . htonl $ l = " ++ show (encode . htonl $ l)
+    putStrLn $ "decode . encode . htonl $ l =" ++ show (decode . encode . htonl $ l :: Word32)
+    putStrLn $ "ntohl . decode . encode . htonl $ l =" ++ show (ntohl . decode . encode . htonl $ l)
+
