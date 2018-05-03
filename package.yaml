@@ -36,7 +36,7 @@ dependencies:
 - split
 - aeson
 - binary
-
+- network-socket-options
 library:
   source-dirs: 
       - src

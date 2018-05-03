@@ -3,6 +3,7 @@
 module UI.Service where
 
 import qualified Network.Socket as Sock
+import Network.Socket.Options
 import Network.Socket hiding (sendTo, send, recv)
 import qualified Control.Exception as E
 import qualified Network.Socket.ByteString.Lazy as NBL (send, sendAll, recv)
@@ -38,6 +39,7 @@ import Data.Monoid ((<>))
 import Note
 
 chunk_size = 32768 -- 2 ^ 15
+recv_timeout = 1000000
 
 encode' :: ToJSON a => a -> BL.ByteString
 encode' = A.encode
@@ -122,6 +124,7 @@ server = do
         (client, _) <- accept sock
         --clientHandle <- socketToHandle client ReadMode 
         --hSetBuffering clientHandle NoBuffering
+        setRecvTimeout client recv_timeout
         forkIO $ do
             (contents, len) <- recvAll client
             putStrLn $ "received payload of length " ++ show len
@@ -236,6 +239,7 @@ recvAll sock = do
     where go :: Socket -> Int64 -> Builder -> IO BL.ByteString
           go sock len buf = do
               chunk <- NBL.recv sock chunk_size
+              putStrLn "receiving..."
               let chunkLen = BL.length chunk
                   nextLen = len - chunkLen
                   buf' = buf <> (lazyByteString chunk)
