@@ -11,6 +11,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BLC8
 import Data.ByteString.Conversion
+import Data.ByteString.Builder
 
 import qualified Data.Text as T
 import GHC.Generics
@@ -31,8 +32,12 @@ import qualified Data.Aeson as A
 
 import Data.Maybe (fromJust, fromMaybe)
 
-import Note
 import Control.Monad.State
+import Data.Monoid ((<>))
+
+import Note
+
+chunk_size = 32768 -- 2 ^ 15
 
 encode' :: ToJSON a => a -> BL.ByteString
 encode' = A.encode
@@ -107,16 +112,6 @@ instance FromJSON Cmd
 --      some intrinsic property of the data structures involved.
 --
 
--- server
-server' :: IO ()
-server' = do
-    sock <- socket AF_INET Stream 0
-    setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
-    listen sock 2
-    mainLoop sock
-
--- server
 server :: IO ()
 server = do
     sock <- socket AF_INET Stream 0
@@ -128,19 +123,7 @@ server = do
         --clientHandle <- socketToHandle client ReadMode 
         --hSetBuffering clientHandle NoBuffering
         forkIO $ do
-            blen <- NBL.recv client 8
-            let len = (decode blen :: Int64)
-                -- Why, if I use just 'recv', does the following result in an
-                -- "out of memory" error, and crash?
-                --
-                --  * mixing strict 'n lazy 'ByteString' ? 
-                --      - No--(reversion did not break it)
-                --
-                --  * arcane secret
-                --      - not yet disproven
-                --
-            --contents <- NBL.recv client (fromIntegral len)
-            contents <- NBL.recv client (fromIntegral len)
+            (contents, len) <- recvAll client
             putStrLn $ "received payload of length " ++ show len
             case (A.decode contents :: Maybe Cmd) of
               Just cmd -> do BLC8.putStrLn contents 
@@ -163,32 +146,6 @@ server = do
             close client
             --hClose clientHandle 
         
-
-readAll :: Handle -> B.ByteString -> IO B.ByteString
-readAll h buf = do
-    eof <- hIsEOF h
-    if eof
-       then return buf
-       else (B.hGetLine h)>>= (\bs -> (bs `mappend`) <$> (readAll h ""))
-
-
-mainLoop :: Socket -> IO ()
-mainLoop sock = do
-    --  conn :: (Socket, SockAddr)
-    conn <- accept sock
-    forkIO (runConn conn)
-    mainLoop sock
-
-runConn :: (Socket, SockAddr) -> IO ()
-runConn (sock, _) = do
-    send sock "Hello\n"
-    handle <- socketToHandle sock ReadMode 
-    hSetBuffering handle NoBuffering
-
-    msg <- readAll handle ""
-    putStrLn $ show sock ++ " yielded: " ++ show msg
-    putStrLn "handler-socket receiving shutdown"
-
 
 -- client
 openAndConn :: HostName -> String -> IO (Socket, SockAddr)
@@ -249,7 +206,7 @@ sendCmd (sock, _) cmd = do
 --    print first
 --    second <- recv''
 --    print second
-    contents <- recvAll sock
+    (contents, _) <- recvAll sock
     BLC8.putStrLn contents
     close sock
 
@@ -266,18 +223,25 @@ pack' payload = encode payload
     -- @ntohl . decode@ on the other side.
 
 
-recvAll :: Socket -> IO BL.ByteString
+-- | A (hopefully) less moronic chunking strategy.
+--
+-- NB: 'mappend'ing 'Builder's has O(1) runtime!
+recvAll :: Socket -> IO (BL.ByteString, Int64)
 recvAll sock = do
-    let go bytes buf = do let bytes' = fromIntegral (decode bytes :: Int64)
-                          rest <- NBL.recv sock bytes'
-                          nextLen <- NBL.recv sock 8
-                          let nextBuf = buf `mappend` rest
-                          if not (BL.null nextLen)
-                             then go nextLen nextBuf
-                             else return nextBuf
     blen <- NBL.recv sock 8
-    go blen ""
-    
+    let len = fromIntegral (decode blen :: Int64)
+    contents <- go sock len (lazyByteString "")
+    return (contents, len)
+    -- go sock len ""
+    where go :: Socket -> Int64 -> Builder -> IO BL.ByteString
+          go sock len buf = do
+              chunk <- NBL.recv sock chunk_size
+              let chunkLen = BL.length chunk
+                  nextLen = len - chunkLen
+                  buf' = buf <> (lazyByteString chunk)
+              if nextLen > 0
+                 then go sock nextLen buf' -- optimize?
+                 else return (toLazyByteString buf')
 
 
 unroll :: Word32 -> [Word8]
