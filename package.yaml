@@ -37,6 +37,8 @@ dependencies:
 - aeson
 - binary
 - network-socket-options
+- tostring
+- base64-bytestring
 library:
   source-dirs: 
       - src

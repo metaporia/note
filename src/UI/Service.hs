@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-module UI.Service where
+module UI.Service (server, oas, module Types) where
 
 import qualified Network.Socket as Sock
 import Network.Socket.Options
@@ -10,9 +10,13 @@ import qualified Network.Socket.ByteString.Lazy as NBL (send, sendAll, recv)
 import Network.Socket.ByteString (send, sendAll, recv)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
+import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as BLC8
 import Data.ByteString.Conversion
 import Data.ByteString.Builder
+
+
+import Crypto.Hash 
 
 import qualified Data.Text as T
 import GHC.Generics
@@ -28,7 +32,7 @@ import Data.Bits
 import Text.Printf
 
 import Data.Int (Int64)
-import Data.Aeson hiding (encode, decode)
+import Data.Aeson hiding (encode, decode, Result)
 import qualified Data.Aeson as A
 
 import Data.Maybe (fromJust, fromMaybe)
@@ -36,7 +40,9 @@ import Data.Maybe (fromJust, fromMaybe)
 import Control.Monad.State
 import Data.Monoid ((<>))
 
-import Note
+import Note hiding (runWith)
+
+import UI.Types as Types
 
 chunk_size = 32768 -- 2 ^ 15
 recv_timeout = 1000000
@@ -46,73 +52,6 @@ encode' = A.encode
 
 decode' :: FromJSON a => BL.ByteString -> Maybe a
 decode' = A.decode
-
-
-data Cmd = Cmd T.Text [T.Text] deriving (Eq, Generic, Show)
-
-getCmd :: Cmd -> T.Text
-getCmd (Cmd cmd _) = cmd
-
-getArgs :: Cmd -> [T.Text]
-getArgs (Cmd _ args) = args
-
-cmd = Cmd "cmd" ["arg0", "arg1", "arg2"]
-
-instance ToJSON Cmd where
-
-    toJSON (Cmd cmd args) = object [ "type" .= String "command" 
-                                   , "name" .= String cmd
-                                   , "args" .= toJSON args
-                                   ]
-
-    toEncoding = genericToEncoding defaultOptions
-
-instance FromJSON Cmd
-
-
--- | `note` service: 
---
--- * listen for content requests of the form @load <key> <db>@ which should
--- respond with the result of @deref db key@
---
--- * listen for location/context requests of the form @locate <key> <db>@ which
--- should respond with a list of keys (those possible aliases for the conctent
--- around the current cursor position).
--- 
---
--- `note` client:
---
--- For use in e.g., [neo]vim plugin.
---
--- * yield keys of currently viewed blob -- name the buffer? keep a dict?
---
---      - this is kind of tricky as there may not be /one/ key for a given
---      stream. perhaps a safe default would be to return the key of the
---      longest val (that is, of the Blob variant)--that's it: deref Spans until
---      a blob is retrieved, then return teh key to that blob. Thus, /any/ key
---      that references a part of the current content stream should suffice to
---      identitify the context, right?
---
---      - some indication of the scope of each span may help users pick which
---      fits their query.
---      
---      - the key(s) of the smallest span around the query cursorPosn should be
---      returned first
---
--- * alias (abbrev?) keys
---
--- * link aliases, keys
---
--- * create new blobs
---
--- * load blob
---
--- * preview associated blobs (w abbrev keys)
---
---      - this will also be tricky, but more due to the UI limitations of vim
---      coupled with the potentially large number of associated 'Val's, than to
---      some intrinsic property of the data structures involved.
---
 
 server :: IO ()
 server = do
@@ -148,6 +87,68 @@ server = do
             putStrLn ""
             close client
             --hClose clientHandle 
+server' :: IO ()
+server' = do
+    sock <- socket AF_INET Stream 0
+    setSocketOption sock ReuseAddr 1
+    bind sock (SockAddrInet 4242 iNADDR_ANY)
+    listen sock 10
+    let loop n = do
+            (client, _) <- accept sock
+            --clientHandle <- socketToHandle client ReadMode 
+            --hSetBuffering clientHandle NoBuffering
+            setRecvTimeout client recv_timeout
+            (contents, len) <- recvAll client
+            putStrLn $ "received payload of length " ++ show len
+            let mNote = do cmd <- (A.decode contents :: Maybe Cmd)
+                           noteS <- runCmd' cmd
+                           return noteS
+                mRes = sequence $ (flip runWith n) <$> mNote
+
+            mRes' <- mRes
+            putStrLn $ show mRes'
+            let ret = do (mST, nextState) <- mRes'
+                         st <- mST
+                         return (st, nextState)
+            case ret of
+              Just (st, nextState) -> do NBL.sendAll client . encode . A.encode $ st
+                                         close client
+                                         putStrLn "looping newstate"
+                                         loop nextState
+              Nothing -> do { close client; putStrLn "looping" ; loop n }
+
+    loop note'
+    close sock
+    return ()
+
+contents = encode . A.encode $ Blob' "AOEuhaoeuaoeuaoeu"
+cmd' = encode . A.encode $ Cmd "deref" ["spec"]
+
+test :: IO (ServiceTypes SHA1, Note SHA1 T.Text)
+test = do
+    -- we're in the 'Maybe' monad here
+    let mNote = do cmd <- (A.decode (decode cmd' :: BLC8.ByteString) :: Maybe (Cmd))
+                   noteS <- (runCmd' cmd :: Maybe (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
+                   return noteS
+        mRes = (runWith <$> mNote) <*> Just note'
+--    putStrLn $ show mRes'
+    let ret = 
+            case mRes of 
+              Nothing -> do putStrLn "arg error. see applyN"
+                            putStrLn "nthing case"
+                            return (Err "eaou", note')
+              Just ioval -> do (mST, nextNote) <- ioval
+                               putStrLn $ show mST
+                               return (fromMaybe (Err "no ServiceType available") mST, nextNote)
+
+    (sts, next) <- ret
+    putStrLn $ "about to send: " ++ (show sts)
+    return (sts, next)
+       
+runWith :: NoteS SHA1 (Maybe (ServiceTypes SHA1))
+        -> Note SHA1 T.Text 
+        -> IO (Maybe (ServiceTypes SHA1), Note SHA1 T.Text)
+runWith noteS s = runNoteS noteS s
         
 
 -- client
@@ -239,7 +240,7 @@ recvAll sock = do
     where go :: Socket -> Int64 -> Builder -> IO BL.ByteString
           go sock len buf = do
               chunk <- NBL.recv sock chunk_size
-              putStrLn "receiving..."
+--             putStrLn "receiving..."
               let chunkLen = BL.length chunk
                   nextLen = len - chunkLen
                   buf' = buf <> (lazyByteString chunk)

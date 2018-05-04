@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Note where
@@ -17,11 +18,29 @@ import Control.Monad.Trans.Maybe
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+import Data.Text.Encoding (decodeUtf8,encodeUtf8)
 import Data.String (IsString)
+import Data.String.ToString (toString)
+
+import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as LIO
+import qualified Data.ByteString as B
+import Data.ByteString.Conversion
+
+import qualified Data.ByteString.Base64 as Base64
 
 import Data.Functor.Identity
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Data.Tuple (swap)
+
+import Data.Aeson ( ToJSON(..), FromJSON(..), Value(..), encode, decode, genericToEncoding
+                  , toEncoding, defaultOptions, object, (.=))
+
+import Data.ByteArray (convert, ByteArrayAccess)
+
+import qualified Data.Binary as BIN
+
+import GHC.Generics
 
 import Link
 import qualified VMap as VM
@@ -44,14 +63,15 @@ newNote :: Note alg c
 newNote = Note Link.empty VM.empty (newAbbrevStore 7) newSelVMap
 
 loadNS :: forall alg c. (VMVal c, HashAlg alg)
-      => c
-      -> StateT (Note alg c) Identity (Maybe (Key alg))
+       => c
+       -> StateT (Note alg c) Identity (Maybe (Key alg))
 loadNS c = StateT  $ \note -> 
-               let vm = getVMap note
-                   links = getLinks note
-                   abbrev = getAbbrev note
-                   (mK, vm') = runVState (load c) vm
-                in return (mK, Note links vm' abbrev (getSelVMap note))
+    let vm = getVMap note
+        links = getLinks note
+        abbrev = getAbbrev note
+        (mK, vm') = runVState (load c) vm
+     in return (mK, Note links vm' abbrev (getSelVMap note))
+
 
 
 -- | 'link', but wrapped for convenience in 'StateT (Note alg c) Identity ()'.
@@ -66,9 +86,9 @@ linkNS s o = StateT $ \note ->
      in return ((), Note links' (getVMap note) abbrev (getSelVMap note))
 
 link :: (Linker linker alg, Monoid (linker alg))
-        => Subject alg
-        -> Object alg
-        -> State (linker alg) ()
+     => Subject alg
+     -> Object alg
+     -> State (linker alg) ()
 link s o = insert' s o
 
 --init :: State s a 
@@ -91,7 +111,7 @@ lssm  = putStrLn . pprintSVM . getSelVMap
 
 -- | Pretty much useless.
 lsvmS' :: (VMVal c, HashAlg alg, Show c, Show alg)
-      => StateT (Note alg c) IO ()
+       => StateT (Note alg c) IO ()
 lsvmS' = undefined
 
 -- | 'Abbrev'/'State' wrapper.
@@ -105,10 +125,10 @@ linkAbbrevNS s o = state $ \note ->
         tup = case (lengthen abbr s, lengthen abbr o) of
                 (Just ks, Just ko) -> Just (ks, ko)
                 (_, _) -> Nothing
-     in if isJust tup 
-           then let (sk, ok) = fromJust tup
-                    (_, note') = runState (linkNS (Subj sk) (Obj ok)) note
-                 in (True, note')
+             in if isJust tup 
+                   then let (sk, ok) = fromJust tup
+                            (_, note') = runState (linkNS (Subj sk) (Obj ok)) note
+                         in (True, note')
            else (False, note)
 
 -- | Adds new @abbrev -> full-length@ key entry to the given 'Note''s 'Abbrev'.
@@ -129,7 +149,7 @@ aliasNS a k = state $
     \(Note lnk vm abbr selvm) ->
         let (_, abbr') = runState (alias a k) abbr
          in ((), Note lnk vm abbr' selvm)
-        
+
 -- | Links two shortened 'Key's. Returns 'False' if abbrev lookup fails.
 aliasAbbrevNS :: T.Text
               -> T.Text
@@ -147,6 +167,7 @@ insertFromFile fp = MsT . MaybeT . StateT $ \m -> do
     f <- TIO.readFile fp
     let val = mkBlob f
     return . swap $ VM.insert val m
+
 
 
 userSel0 = Sel 0 178
@@ -169,7 +190,7 @@ insertSpan (k, s) = state $ \note@(Note lnk vm abbr sm) ->
 -- 2 registerSpanInsertion
 
 insertSpan' :: (HashAlg alg, VMVal c) 
-           => Selection -> Key alg -> MsT (VMap alg c) IO (Key alg)
+            => Selection -> Key alg -> MsT (VMap alg c) IO (Key alg)
 insertSpan' s k = mkMsT $ \m -> do
     return . swap $ VM.insert (mkSpan k s) m
 
@@ -180,7 +201,7 @@ maa = t' "specificity.md" userSel0
 
 --g :: MsT (Key SHA1, VMap SHA1 T.Text) IO (Key SHA1) -> MsT (VMap SHA1 T.Text) IO (T.Text) 
 --g mst = do
---    (k, m) <- get
+    --    (k, m) <- get
 --    case lookup m k of
 --      Just (Blob _ b) -> return b
 --      _               -> return ""
@@ -224,8 +245,8 @@ runVState vs = runIdentity . runStateT vs
 -- | Loads the contents of some source file into a 'VMap'. Returns originial
 -- 'VMap' unchanged if the insertion fails.
 load :: (VMVal c, HashAlg alg)
-      => c
-      -> VState alg c (Maybe (Key alg)) --State (VMap alg c) (Maybe (Key alg))
+     => c
+     -> VState alg c (Maybe (Key alg)) --State (VMap alg c) (Maybe (Key alg))
 load = state . (swap .) . insertRawBlob 
 -- or, given:
 (.*) = (.) . (.)
@@ -245,10 +266,10 @@ initWith  c =  runVState (load c) VM.empty
 spec :: T.Text
 spec = [r|The specificity of being perks up its over-anthropomorphized head with an
 expression approaching hopeful bewilderment, 'ooh, was that my name? do they
-wanna talk to me? ooh ooh.' Then it notices it's self imposed limits (having
+                                                                        wanna talk to me? ooh ooh.' Then it notices it's self imposed limits (having
 been made fully human to my mind, it is subject to the same conditions) and
 thinks to itself, 'why do I think 'why do I think 'why do I think 'why do I
-think '...ad infinitum''' until it notices the trend towards redundancy and has
+                          think '...ad infinitum''' until it notices the trend towards redundancy and has
 the presence of mind to deduce that as an entity bound by consciousness, and
 therefore perception as well, it must be a highly specific being comprised of
 equally specific parts. At this point the very-nearly-human representation of
@@ -276,7 +297,7 @@ have been Specificity's conscious decision to throw in the towel in the hopes
 of protecting the delicate symbiotic balance struck by the various forms of
 existential obfuscation -- it's a defense mechanism after all, except it killed
 him. What does that say about life?
-|]
+    |]
 
 blob :: T.Text
 blob = "hello world"
@@ -314,14 +335,14 @@ st' = StateT $ \note ->
 -- loadNS blob >>= 
 -- linkr :: Key alg -> Key alg -> StateT (Note SHA1 T.Text) ()
 loadThenLink :: State (Note SHA1 T.Text) (Maybe (Key SHA1))
-        -> State (Note SHA1 T.Text) (Maybe (Key SHA1))
-        -> State (Note SHA1 T.Text) ()
+             -> State (Note SHA1 T.Text) (Maybe (Key SHA1))
+             -> State (Note SHA1 T.Text) ()
 loadThenLink s0 s1 = 
     StateT $ \note -> 
         let x :: a
             x = undefined
          in undefined
-        
+
 
 
 (mK', note) = init (st' 
@@ -330,7 +351,7 @@ loadThenLink s0 s1 =
                 *> abbrevNS k2 
                 *> abbrevNS k3
                 *> loadNS b2' 
-                ) newNote
+                   ) newNote
 
 vmap = getVMap note
 lnkr = getLinks note
@@ -340,8 +361,8 @@ k0 = ks !! 0
 k1 = ks !! 1
 k2 = ks !! 2
 k3 = ks !! 3
-(mks, note') = init (  linkAbbrevNS "e8163c4" "ed464c0" 
-                    *> aliasAbbrevNS "spec" "e8163c4"
+(mks, note') = init (  linkAbbrevNS (T.pack . take 7 $ show k2) "ed464c0" 
+                    *> aliasAbbrevNS "spec" (T.pack . take 7 $ show k2)
                     *> insertSpan (k2, Sel 5 7)
                     *> insertSpan (k2, Sel 1 800)
                     *> insertSpan (k2, Sel 3 10)
@@ -359,7 +380,7 @@ locateIdx' k idx = state $
 
 -- Deref 'ShortKey' key @abbr@.
 derefAbbrNS :: (VMVal c, HashAlg alg)
-              => T.Text -> State (Note alg c) (Maybe c)
+            => T.Text -> State (Note alg c) (Maybe c)
 derefAbbrNS abbr = state $ 
     \n@(Note lnk vm ab sm) -> ((lengthen ab abbr) >>= deref vm, n)
 
@@ -373,3 +394,13 @@ cmdLookup k t = M.lookup k cmds <*> pure t
 runWith n state = runState state n
 
 lookupRun cmd abbr note = cmdLookup cmd abbr >>= fst . runWith note
+
+--extricate (Cmd cmd args) = 
+    --    let (fn, nargs) = M.lookup cmd cmds'
+--        args' = take 3 args
+--     in if length args' >= nargs 
+--           then f (args' !! 0)
+--                  (args' !! 1)
+--                  (args' !! 2)
+
+

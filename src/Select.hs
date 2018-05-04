@@ -6,6 +6,7 @@ Further commentary, (with /emphasized/, __bold__, __/emphBold/__, and @monospace
 -}
 --{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Select where
 
 --import CMap ( CMap(CMap, cmap, nextId), initWith
@@ -25,6 +26,8 @@ import Control.Monad (join)
 import Data.String (IsString)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
+import Data.Aeson
+import GHC.Generics
 
 import Helpers
 
@@ -47,7 +50,12 @@ import Helpers
 
 data Selection = Sel { sIdx :: Int
                      , eIdx :: Int
-                     } deriving (Eq, Show)
+                     } deriving (Eq, Show, Generic)
+
+instance ToJSON Selection where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON Selection
 
 data Selection' = Sel' { sIdx' :: Idx, eIdx' :: Idx } deriving (Eq, Show)
 

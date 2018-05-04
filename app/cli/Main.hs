@@ -16,7 +16,7 @@ import GHC.Generics
 import Data.Aeson hiding (Result(..))
 
 import Parse
-import UI.Service
+import UI.Service hiding (Result)
 
 import Control.Monad
 
