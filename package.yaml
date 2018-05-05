@@ -39,6 +39,7 @@ dependencies:
 - network-socket-options
 - tostring
 - base64-bytestring
+- unix
 library:
   source-dirs: 
       - src

@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module UI.Service (server, oas, module Types) where
+module UI.Service (server, server', oas, module Types) where
 
 import qualified Network.Socket as Sock
 import Network.Socket.Options
@@ -15,6 +16,8 @@ import qualified Data.ByteString.Lazy.Char8 as BLC8
 import Data.ByteString.Conversion
 import Data.ByteString.Builder
 
+import System.Posix.Signals
+
 
 import Crypto.Hash 
 
@@ -23,8 +26,12 @@ import GHC.Generics
 
 import System.IO
 
-import Control.Concurrent (forkIO)
+import System.Exit
+import Control.Concurrent ( forkIO, myThreadId, ThreadId, threadDelay
+                          , newEmptyMVar, putMVar)
+import qualified Control.Exception as E
 import Control.Monad (forever, foldM)
+
 
 import Data.Binary
 import Data.Bits
@@ -43,6 +50,7 @@ import Data.Monoid ((<>))
 import Note hiding (runWith)
 
 import UI.Types as Types
+import VMap (HashAlg)
 
 chunk_size = 32768 -- 2 ^ 15
 recv_timeout = 1000000
@@ -54,7 +62,7 @@ decode' :: FromJSON a => BL.ByteString -> Maybe a
 decode' = A.decode
 
 server :: IO ()
-server = do
+server = undefined {-do
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
     bind sock (SockAddrInet 4242 iNADDR_ANY)
@@ -87,16 +95,34 @@ server = do
             putStrLn ""
             close client
             --hClose clientHandle 
+            -}
+
+ex = do
+    tid <- myThreadId
+    sock <- socket AF_INET Stream 0
+    setSocketOption sock ReuseAddr 1
+    bind sock (SockAddrInet 4242 iNADDR_ANY)
+    listen sock 2
+
+    installHandler sigINT (Catch (do E.throwTo tid E.UserInterrupt
+                                     close sock)) Nothing
+    threadDelay 5000000
+    
 server' :: IO ()
 server' = do
+    tid <- myThreadId
+    --this <- newEmptyMVar
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
     bind sock (SockAddrInet 4242 iNADDR_ANY)
     listen sock 10
+    -- (posix) system signal handling
     let loop n = do
             (client, _) <- accept sock
             --clientHandle <- socketToHandle client ReadMode 
             --hSetBuffering clientHandle NoBuffering
+            ---
+            
             setRecvTimeout client recv_timeout
             (contents, len) <- recvAll client
             putStrLn $ "received payload of length " ++ show len
@@ -115,14 +141,35 @@ server' = do
                                          close client
                                          putStrLn "looping newstate"
                                          loop nextState
-              Nothing -> do { close client; putStrLn "looping" ; loop n }
+              Nothing -> if "exit" `BLC8.isPrefixOf` contents 
+                            then do { close client; close sock }
+                            else do { close client; putStrLn "looping" ; loop n }
+
+    let intHandler :: Handler
+        intHandler = Catch $ do 
+                E.throwTo tid E.UserInterrupt
+                close sock
+                putStrLn "caught SIGINT; closed sock"
+                --putMVar this ()
+
+
+    installHandler sigINT intHandler Nothing
 
     loop note'
-    close sock
-    return ()
+
+
+showSock sock = do
+    isc <- isConnected sock
+    isb <- isBound sock
+    isr <- isReadable sock
+    isl <- isListening sock
+    putStrLn $ show isc
+    putStrLn $ show isb
+    putStrLn $ show isr
+    putStrLn $ show isl
 
 contents = encode . A.encode $ Blob' "AOEuhaoeuaoeuaoeu"
-cmd' = encode . A.encode $ Cmd "deref" ["spec"]
+cmd' = encode . A.encode $ Cmd "deref" [Blob' "spec"]
 
 test :: IO (ServiceTypes SHA1, Note SHA1 T.Text)
 test = do
@@ -149,6 +196,10 @@ runWith :: NoteS SHA1 (Maybe (ServiceTypes SHA1))
         -> Note SHA1 T.Text 
         -> IO (Maybe (ServiceTypes SHA1), Note SHA1 T.Text)
 runWith noteS s = runNoteS noteS s
+
+
+shutdownServer :: Socket -> IO ()
+shutdownServer sock = NBL.sendAll sock (encode ("exit":: BL.ByteString) :: BL.ByteString)
         
 
 -- client
@@ -187,7 +238,7 @@ send' (sock, sockAddr) = do
     return (sock, sockAddr)
 
 
-sendCmd :: (Socket, SockAddr) -> Cmd -> IO ()
+sendCmd :: (Socket, SockAddr) -> Cmd -> IO (Maybe (ServiceTypes SHA1))
 sendCmd (sock, _) cmd = do
 --    putStrLn "please enter '>host port'"
 --    putStr ">"
@@ -214,9 +265,14 @@ sendCmd (sock, _) cmd = do
     BLC8.putStrLn contents
     close sock
 
+    return (A.decode contents :: Maybe (ServiceTypes SHA1))
+
+oas :: Cmd -> IO (Maybe (ServiceTypes SHA1))
 oas cmd = do
     conn <- openAndConn "localhost" "4242"
-    sendCmd conn cmd
+    mST <- sendCmd conn cmd
+    return mST
+
 
 -- NB:
 --
