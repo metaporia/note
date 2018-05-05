@@ -19,7 +19,7 @@ import Parse
 import UI.Service hiding (Result)
 
 import Control.Monad
-
+{-
 parseCmd' :: Parser String
 parseCmd'  = pad' (some letter) 
 
@@ -57,10 +57,10 @@ parseCusCmd cmdStr nargs =
     <* skipMany (char ' ')
     <* skip (char '\n')
     <* eof
-
+-}
 main :: IO ()
-main = server
-
+main = server'
+{-
 c = try (parseCusCmd "command" 2) <?> "command <arg> <arg>\\n" 
 d = try (parseCusCmd "eal" 3) <?> "eal <arg> <arg> <arg>\\n"
 
@@ -105,4 +105,4 @@ parse p s = parseString p mempty s
 resultToMaybe :: Result a -> Maybe a
 resultToMaybe (Success v) = Just v
 resultToMaybe (Failure _) = Nothing
-
+-}
