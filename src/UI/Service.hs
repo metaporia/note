@@ -33,7 +33,7 @@ import qualified Control.Exception as E
 import Control.Monad (forever, foldM)
 
 
-import Data.Binary
+import Data.Binary hiding (get, put)
 import Data.Bits
 
 import Text.Printf
@@ -47,6 +47,8 @@ import Data.Either
 
 import Control.Monad.State
 import Data.Monoid ((<>))
+import Control.Exception hiding (Handler)
+import Control.Monad.Except
 
 
 -- Internal
@@ -171,7 +173,8 @@ eserver = do
     bind sock (SockAddrInet 4242 iNADDR_ANY)
     listen sock 10
     -- (posix) system signal handling
-    let loop n = do
+    let loop :: Note' -> IO ()
+        loop n = do
             (client, _) <- accept sock
             --clientHandle <- socketToHandle client ReadMode 
             --hSetBuffering clientHandle NoBuffering
@@ -183,26 +186,21 @@ eserver = do
             let eCmd = maybeToEither (A.decode contents :: Maybe Cmd)
                 eNote = eCmd >>= runeCmd
                 mRes = (flip runWith' n) <$> eNote
-                mTup :: IO (Either String (Maybe ST, Note'))
-                mTup = undefined--fmap join $ sequence $ (flip runWith' n) <$> eNote
-            tup <- mTup
-            case tup of
+                embedded :: IO (Either String (ST, Note'))
+                embedded = runWith' (handleCmd eCmd) n
+            eTup <- embedded
+            case eTup of
               -- 'apply' err
               Left err -> do print err
-                             NBL.sendAll client . encode $ err
+                             NBL.sendAll client . encode . A.encode . Err $ T.pack err
                              close client
                              putStrLn "looping newstate--lerr"
                              loop n
               -- success case
-              Right (Just st, n') -> do NBL.sendAll client . encode . A.encode $ st
-                                        close client
-                                        putStrLn "looping newstate"
-                                        loop n'
-              -- failure, may exit
-              Right (Nothing, state) -> 
-                  if "exit" `BLC8.isPrefixOf` contents 
-                     then do { close client; close sock }
-                     else do { close client; putStrLn "looping" ; loop n }
+              Right (st, n') -> do NBL.sendAll client . encode . A.encode $ st
+                                   close client
+                                   putStrLn "looping newstate"
+                                   loop n'
 
     let intHandler :: Handler
         intHandler = Catch $ do 
@@ -216,6 +214,24 @@ eserver = do
 
     loop note'
     close sock
+
+
+-- | Embed application of 'Cmd' inside 'NoteS'' state.
+handleCmd :: Either String Cmd -> NoteS' String ST 
+handleCmd eCmd = do
+    n <- get
+    cmd <- liftEither eCmd
+    noteS <- liftEither $ runeCmd cmd
+    e <- liftIO $ runWith' noteS n
+    (st, n') <- liftEither e
+    put n'
+    return st
+
+handleCmd' :: Socket -> Socket -> Note' -> IO ()
+handleCmd' = undefined
+
+    
+    
 
 
 showSock sock = do

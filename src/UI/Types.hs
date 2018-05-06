@@ -203,7 +203,7 @@ elinkAbbr st st' = do
 ederefAbbr :: ST -> NoteS' String ST
 ederefAbbr st = do
     n@(Note lnk vm abbr sm) <- get
-    alias <- liftEither $ getBlob st
+    alias <- liftEither $ getAbbr st
     k <- liftEither $ case lengthen abbr alias of
                        Just k -> Right k
                        Nothing -> Left "abbr not found in Abbrev"
