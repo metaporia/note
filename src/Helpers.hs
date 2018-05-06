@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE StandaloneDeriving #-}
 module Helpers where
 
 import Crypto.Hash (Digest)
@@ -8,7 +5,7 @@ import qualified Data.Map as M
 
 import Data.Aeson (ToJSON)
 
-import GHC.Generics
+import Control.Exception
 
 type Id = Int
 type Key = Digest 
@@ -32,5 +29,11 @@ eitherToMaybe (Right r) = Just r
 maybeToEither :: Monoid l => Maybe r -> Either l r
 maybeToEither (Just r) = Right r
 maybeToEither Nothing = Left mempty
+
+convertException :: Exception e => Either e a  -> Either String a
+convertException (Right a) = Right a
+convertException (Left err) = Left (displayException err)
+
+
 
 

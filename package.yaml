@@ -27,7 +27,7 @@ dependencies:
 - bytestring-conversion
 - text
 - memory
-- mtl
+- mtl >= 2.2.2
 - transformers
 - raw-strings-qq
 - byteable
@@ -58,7 +58,6 @@ library:
       - Note
       - Abbrev
       - Parse
-      - Note.Trans
   other-modules:
 
 executables:

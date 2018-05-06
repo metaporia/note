@@ -354,7 +354,7 @@ loadThenLink s0 s1 =
 
 vmap = getVMap note
 lnkr = getLinks note
-abbrev' = getAbbrev note
+abbrev'' = getAbbrev note
 ks = appVM M.keys vmap
 k0 = ks !! 0
 k1 = ks !! 1

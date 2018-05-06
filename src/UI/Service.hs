@@ -55,7 +55,6 @@ import Note hiding (runWith)
 import UI.Types as Types
 import VMap (HashAlg)
 import Helpers
-import Note.Trans
 
 
 chunk_size = 32768 -- 2 ^ 15
@@ -185,18 +184,21 @@ eserver = do
                 eNote = eCmd >>= runeCmd
                 mRes = (flip runWith' n) <$> eNote
                 mTup :: IO (Either String (Maybe ST, Note'))
-                mTup = fmap join $ sequence $ (flip runWith' n) <$> eNote
+                mTup = undefined--fmap join $ sequence $ (flip runWith' n) <$> eNote
             tup <- mTup
             case tup of
+              -- 'apply' err
               Left err -> do print err
                              NBL.sendAll client . encode $ err
                              close client
                              putStrLn "looping newstate--lerr"
                              loop n
+              -- success case
               Right (Just st, n') -> do NBL.sendAll client . encode . A.encode $ st
                                         close client
                                         putStrLn "looping newstate"
                                         loop n'
+              -- failure, may exit
               Right (Nothing, state) -> 
                   if "exit" `BLC8.isPrefixOf` contents 
                      then do { close client; close sock }

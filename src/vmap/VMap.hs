@@ -10,6 +10,7 @@ module VMap ( VMap
             , VMVal, HashAlg
             , empty, emptySHA1
             , deref
+            , deref'
             , lookup, insertRawBlob, insertRawSpan
             , insert
             , appVM
@@ -103,6 +104,17 @@ deref m k = case lookup m k of
               Just (Span key sel') -> 
                   deref m key >>= return . getSel . flip sel sel'
               _ -> Nothing
+
+deref' :: (HashAlg alg, VMVal c)
+       => VMap alg c -> Key alg -> Either String c
+deref' m k = case lookup m k of
+              Just (Blob _ b) -> Right b
+              Just (Span key sel') -> 
+                  case deref m key >>= return . getSel . flip sel sel' of
+                    Just c -> Right c
+                    Nothing -> Left "span inner key note found in vmap"
+              _ -> Left "key not found in vmap"
+
 
 
 lookup :: VMap alg c -> Key alg -> Maybe (Val alg c)

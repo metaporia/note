@@ -41,6 +41,9 @@ import Control.Monad.Trans.Either
 import Control.Monad.Trans.State (StateT, runStateT)
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Identity
+import Control.Monad.Except 
+
+import Control.Exception
 
 
 import GHC.Generics
@@ -49,18 +52,17 @@ import Link
 import qualified VMap as VM
 import VMap
 import Abbrev
-import Helpers (Key, eitherToMaybe)
+import Helpers (Key, eitherToMaybe, maybeToEither, convertException)
 import Val
 import Select
 import UI.Vi
 import Note
-import Note.Trans
 
 type Note' = Note SHA1 T.Text
 type ST = ServiceTypes SHA1
 -- transformer ordering case one
 newtype NoteS' err a = NoteS' { getNoteS' :: StateT Note' (EitherT err IO) a }
-    deriving (Functor, Applicative, Monad, MonadIO, MonadState (Note SHA1 T.Text))
+    deriving (Functor, Applicative, Monad, MonadIO, MonadState (Note SHA1 T.Text), MonadError err)
 
 emptyNoteS' :: NoteS' err ()
 emptyNoteS' = put newNote 
@@ -72,14 +74,13 @@ runWith' m s = runNoteS' m s
 
  
 
-derefKey :: ST -> NoteS' String (Maybe (ServiceTypes SHA1))
+derefKey :: ST -> NoteS' String (ServiceTypes SHA1)
 derefKey st = do
     n@(Note lnk vm abbr sm) <- get
-    let mK = getKey st
-        bs = mK >>= fmap Blob' . deref vm 
-    x <- liftIO $ putStrLn $ show bs
+    k <- liftEither $ getKey st
+    st' <- liftEither . fmap Blob' . deref' vm $ k
     put n
-    return bs
+    return st'
 
 apply0 = const
 
@@ -129,50 +130,120 @@ hasLen' xs n =
 data ServiceTypes alg = Blob' T.Text
               | Span' (AesonKey alg) Selection
               | Key' (AesonKey alg)
+              | Abbr T.Text
               | Ls T.Text
               | Err T.Text -- expand to wrap err enum
+              | Msg T.Text
               deriving (Show, Eq, Generic)
 
 instance FromJSON (ServiceTypes alg)
 instance ToJSON (ServiceTypes alg) where
     toEncoding = genericToEncoding defaultOptions
 
-getKey :: HashAlg alg => ServiceTypes alg -> Maybe (Key alg)
+getKey :: HashAlg alg => ServiceTypes alg -> Either String (Key alg)
 getKey (Key' ak) = fromAesonKey ak
-getKey _ = Nothing
+getKey _ = Left "Expected Key', found other variant."
 
-getBlob :: ServiceTypes alg -> Maybe T.Text
-getBlob (Blob' t) = Just t 
-getBlob _ = Nothing
+getBlob :: ServiceTypes alg -> Either String T.Text
+getBlob (Blob' t) = Right t 
+getBlob _ = Left "Expected Blob', but found other variant."
 
-getSpan :: HashAlg alg => ServiceTypes alg -> Maybe (Key alg, Selection)
+getSpan :: HashAlg alg => ServiceTypes alg -> Either String (Key alg, Selection)
 getSpan (Span' ak sel) = fromAesonKey ak >>= \k-> return (k, sel)
-getSpan _ = Nothing
+getSpan _ = Left "Expected Span', found other variant."
 
-getLs :: HashAlg alg => ServiceTypes alg -> Maybe T.Text
-getLs (Ls t) = Just t
-getLs _ = Nothing
+getLs :: HashAlg alg => ServiceTypes alg -> Either String T.Text
+getLs (Ls t) = Right t
+getLs _ = Left "Expected Ls, but found other variant."
 
-getErr :: HashAlg alg => ServiceTypes alg -> Maybe T.Text
-getErr (Err e) = Just e
-getErr _ = Nothing
+getErr :: HashAlg alg => ServiceTypes alg -> Either String T.Text
+getErr (Err e) = Right e
+getErr _ = Left "Expected Err, but found other variant."
 
+getAbbr :: HashAlg alg => ServiceTypes alg -> Either String T.Text
+getAbbr (Abbr e) = Right e
+getAbbr _ = Left "Expected Msg, but found other variant."
+
+getMsg :: HashAlg alg => ServiceTypes alg -> Either String T.Text
+getMsg (Msg e) = Right e
+getMsg _ = Left "Expected Msg, but found other variant."
 
 
 
 ecmds :: (Ord k, IsString k) 
-      =>  M.Map k ([ST] -> Either String (NoteS' String (Maybe ST)))
+      =>  M.Map k ([ST] -> Either String (NoteS' String ST))
 ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("loadf", apply' eloadf)
-                   , ("deref", apply' ederefAbbr)]
-                       {-
-                    , ("link", apply2' linkAbbr'')
-                    ] -- add number of arguments expected to tuple (threeple, rly).
-                   
-                   -}
+                   , ("deref", apply' ederefAbbr)
+                   , ("abbrev",  apply' eabbr)
+                   , ("lsvm",  const (return elsvm))
+                   , ("lslnk", const (return elslnk))
+                   , ("alias", apply2' ealias)
+                   , ("link", apply2' elinkAbbr) ]
+-- new "e*" API
+ealias :: ST -> ST -> NoteS' String ST
+ealias st st' = do
+    alias <- liftEither $ getAbbr st
+    key <- liftEither $ getKey st'
+    n@(Note lnk vm abbr sm) <- get
+    let abbr' = alias' abbr alias key
+    put (Note lnk vm abbr' sm)
+    return $ Msg "alias successfully registered"
+
+elinkAbbr :: ST -> ST -> NoteS' String ST
+elinkAbbr st st' = do
+    n@(Note lnk vm abbr sm) <- get
+    s <- liftEither $ Subj <$> getKey st
+    o <- liftEither $ Obj <$> getKey st'
+    let lnkr' = Link.insert s o lnk
+    put (Note lnkr' vm abbr sm)
+    return $ Msg "link successfuly registered"
 
 
+ederefAbbr :: ST -> NoteS' String ST
+ederefAbbr st = do
+    n@(Note lnk vm abbr sm) <- get
+    alias <- liftEither $ getBlob st
+    k <- liftEither $ case lengthen abbr alias of
+                       Just k -> Right k
+                       Nothing -> Left "abbr not found in Abbrev"
+    val <- liftEither $ 
+        case deref vm k of
+          Just b -> Right b 
+          Nothing -> Left "could not deref key"
+    put n
+    return (Blob' val)
 
+eloadf :: ST -> NoteS' String ST
+eloadf st = do
+    fp <- liftEither . fmap T.unpack $ getBlob st
+    eCont <- liftIO $ (try (TIO.readFile fp) :: IO (Either SomeException T.Text))
+    contents <- liftEither $ convertException eCont
+    n@(Note lnk vm abbr sm) <- get
+    let (vm', mK) = insertRawBlob contents vm
+        k = case mK of
+              Just k' -> Right k'
+              Nothing -> Left "insertion failed."
+    st' <- liftEither $ (Key' . toAesonKey) <$> k
+    put (Note lnk vm' abbr sm)
+    return st'
+
+elsvm :: NoteS' String ST
+elsvm = do
+    note <- get
+    let s = show' $ getVMap note
+    put note
+    return . Ls $  T.pack s
+
+elslnk :: NoteS' String ST
+elslnk = do
+    note <- get
+    let s = pshow $ getLinks note
+    put note
+    return . Ls $ T.pack s
+
+
+-- Deprecated RPC dispatcher
 cmds'' :: (Ord k, IsString k) 
        =>  M.Map k ([ServiceTypes SHA1] -> Maybe (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
 cmds'' = M.fromList [ ("loadf", apply loadf'')
@@ -195,7 +266,7 @@ runCmd' (Cmd cmd args) =
     let f = M.lookup cmd cmds''
      in f >>=  \f' -> f' args
 
-runeCmd :: Cmd -> Either String (NoteS' String (Maybe ST))
+runeCmd :: Cmd -> Either String (NoteS' String ST)
 runeCmd (Cmd cmd args) = 
     let f = M.lookup cmd ecmds
      in case f of 
@@ -234,40 +305,25 @@ loadf' fp = do
 
 -- | Load a file into state.
 loadf'' :: HashAlg alg => ServiceTypes SHA1 -> NoteS alg (Maybe (ServiceTypes alg))
-loadf'' st = do
-    let f :: Maybe String
-        f = T.unpack <$> (getBlob st) 
-    mText <- liftIO $ sequence (f >>= return . TIO.readFile)
+loadf'' st =  undefined {- do
+    fp <- liftEither $ T.unpack <$> getBlob st
+    eContents <- liftIO $  TIO.readFile pf
+    contents <- liftEither eContents
     n@(Note lnk vm abbr sm) <- get
-    case mText of 
-      Just contents -> do let (vm', mK) = insertRawBlob (fromJust mText) vm
-                              lbs = fmap (Key' . toAesonKey) mK
+    insertRawBlob contents vm
+      lbs = fmap (Key' . toAesonKey) mK
                           put (Note lnk vm' abbr sm)
                           return lbs
-      Nothing -> do put n
-                    return Nothing
-
+                          -}
 -- | Load a file into state.
-eloadf :: ST -> NoteS' String (Maybe ST)
-eloadf st = do
-    let f :: Maybe String
-        f = T.unpack <$> (getBlob st) 
-    mText <- liftIO $ sequence (f >>= return . TIO.readFile)
-    n@(Note lnk vm abbr sm) <- get
-    case mText of 
-      Just contents -> do let (vm', mK) = insertRawBlob (fromJust mText) vm
-                              lbs = fmap (Key' . toAesonKey) mK
-                          put (Note lnk vm' abbr sm)
-                          return lbs
-      Nothing -> do put n
-                    return Nothing
-
+data Error = Error String deriving (Eq, Show)
+instance Exception Error
 
 
 derefAbbr' :: HashAlg alg =>  T.Text -> NoteS alg (Maybe L.ByteString)
 derefAbbr' t = do
     n@(Note lnk vm abbr sm) <- get
-    let mK = lengthen abbr t
+    let mK = lengthen abbr t -- err: abbr not found
         bs = mK >>= fmap encode . deref vm 
     x <- liftIO $ putStrLn $ show bs
     put n
@@ -276,27 +332,16 @@ derefAbbr' t = do
 derefAbbr'' :: ServiceTypes SHA1 -> NoteS SHA1 (Maybe (ServiceTypes SHA1))
 derefAbbr'' st = do
     n@(Note lnk vm abbr sm) <- get
-    let mK = getKey st
+    let mK = eitherToMaybe $ getKey st
         bs = mK >>= fmap Blob' . deref vm 
     x <- liftIO $ putStrLn $ show bs
     put n
     return bs
 
-ederefAbbr :: ST -> NoteS' String (Maybe ST)
-ederefAbbr st = do
-    n@(Note lnk vm abbr sm) <- get
-    let mAbr = getBlob st
-        mK = mAbr >>= ( \a -> lengthen abbr a)
-        bs = mK >>= deref vm 
-    x <- liftIO $ putStrLn $ show bs
-    put n
-    return $ fmap Blob' bs
-
-
 derefKey'' :: ServiceTypes SHA1 -> NoteS SHA1 (Maybe (ServiceTypes SHA1))
 derefKey'' st = do
     n@(Note lnk vm abbr sm) <- get
-    let mK = getKey st
+    let mK = eitherToMaybe $ getKey st
         bs = mK >>= fmap Blob' . deref vm 
     x <- liftIO $ putStrLn $ show bs
     put n
@@ -316,13 +361,13 @@ linkAbbr' a a' = do
 linkAbbr'' :: ServiceTypes SHA1 -> ServiceTypes SHA1 ->  NoteS SHA1 (Maybe (ServiceTypes SHA1))
 linkAbbr'' st st' = do
     n@(Note lnk vm abbr sm) <- get
-    let mK = Subj <$> getKey st
-        mK' = Obj <$> getKey st'
+    let mK = Subj <$> (eitherToMaybe $ getKey st)
+        mK' = Obj <$> (eitherToMaybe $ getKey st')
         lnkr' = case (mK >>= \k -> return (\o -> Link.insert k o lnk)) <*> mK' of
                   Just lnk' -> lnk'
                   Nothing -> lnk
     put (Note lnkr' vm abbr sm)
-    return . Just $ Err "Success"
+    return . Just $ Msg "Success"
 
 lsvm' :: (Show alg, HashAlg alg) => NoteS alg (Maybe L.ByteString)
 lsvm' = do
@@ -337,6 +382,17 @@ lsvm'' = do
     let s = show' $ getVMap note
     put note
     return . Just . Ls $  T.pack s
+
+eabbr :: ST -> NoteS' String ST
+eabbr st = do
+    key <- liftEither $ getKey st
+    n@(Note lnk vm abbr sm) <- get
+    let (abr, abbr') = abbrev' abbr key 
+    put (Note lnk vm abbr' sm)
+    return (Abbr abr)
+
+
+
 
 
 
@@ -371,13 +427,16 @@ keyToText = decodeUtf8 . Base64.encode . keyToByteString
 textToKey :: HashAlg alg => T.Text -> Maybe (Key alg)
 textToKey =  join . fmap byteStringToKey . eitherToMaybe . Base64.decode . encodeUtf8
 
+textToKey' :: HashAlg alg => T.Text -> Either String (Key alg)
+textToKey' t =  (Base64.decode . encodeUtf8) t >>= maybeToEither . byteStringToKey  
+
 ak = toAesonKey k0
 
 toAesonKey :: HashAlg alg => Key alg -> AesonKey alg
 toAesonKey = AesonKey . keyToText
 
-fromAesonKey :: HashAlg alg => AesonKey alg -> Maybe (Key alg)
-fromAesonKey = textToKey . getAesonKey
+fromAesonKey :: HashAlg alg => AesonKey alg -> Either String (Key alg)
+fromAesonKey = textToKey' . getAesonKey
 
 data Cmd = Cmd T.Text [ServiceTypes SHA1] deriving (Eq, Generic, Show)
 
