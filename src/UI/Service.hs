@@ -173,6 +173,7 @@ eserver = do
     bind sock (SockAddrInet 4242 iNADDR_ANY)
     listen sock 10
     -- (posix) system signal handling
+    --  can loop be rewritten in the NoteS' monad?
     let loop :: Note' -> IO ()
         loop n = do
             (client, _) <- accept sock
@@ -215,6 +216,55 @@ eserver = do
     loop note'
     close sock
 
+eserve :: IO ()
+eserve = do
+    tid <- myThreadId
+    sock <- socket AF_INET Stream 0
+    setSocketOption sock ReuseAddr 1
+    bind sock (SockAddrInet 4242 iNADDR_ANY)
+    listen sock 10
+    let intHandler :: Handler
+        intHandler = Catch $ do 
+                E.throwTo tid E.UserInterrupt
+                close sock
+                putStrLn "caught SIGINT; closed sock"
+    installHandler sigINT intHandler Nothing
+    e <- runWith' (loop' sock note') newNote -- 
+    
+    case e of
+      Left err -> print err
+      Right (_, finalState) -> print "receieved final state."
+
+    close sock
+            
+loop' :: Socket -> Note' -> NoteS' String ()
+loop' sock  n = do
+    (client, _ ) <- liftIO $ accept sock
+    liftIO $ setRecvTimeout client recv_timeout
+    (contents, len) <- liftIO $ recvAll client
+    liftIO . putStrLn $ "received payload of length " ++ show len
+    cmd <- liftEither . maybeToEither $ (A.decode contents :: Maybe Cmd)
+    noteS <- liftEither $ runeCmd cmd
+    e <- liftIO $ runWith' noteS n
+    case e of
+      Left err -> do liftIO $print err
+                     liftIO $ NBL.sendAll client . encode . A.encode . Err $ T.pack err
+                     liftIO $ close client
+                     liftIO $ putStrLn "looping newstate--lerr"
+                     loop' sock n
+      Right (st, n') -> do liftIO $ NBL.sendAll client . encode . A.encode $ st
+                           liftIO $ close client
+                           liftIO $ putStrLn "looping newstate"
+                           let x = runWith' (loop' sock n) n
+                           loop' sock n'
+
+    
+
+    return ()
+    
+    
+
+
 
 -- | Embed application of 'Cmd' inside 'NoteS'' state.
 handleCmd :: Either String Cmd -> NoteS' String ST 
@@ -226,13 +276,6 @@ handleCmd eCmd = do
     (st, n') <- liftEither e
     put n'
     return st
-
-handleCmd' :: Socket -> Socket -> Note' -> IO ()
-handleCmd' = undefined
-
-    
-    
-
 
 showSock sock = do
     isc <- isConnected sock
