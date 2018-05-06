@@ -32,6 +32,7 @@ import Link
 import Data.Bifunctor
 import Val
 import UI.Vi 
+import UI.Types
 
 import Control.Monad.State
 import Control.Monad.State.Class

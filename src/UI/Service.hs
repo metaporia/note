@@ -43,14 +43,20 @@ import Data.Aeson hiding (encode, decode, Result)
 import qualified Data.Aeson as A
 
 import Data.Maybe (fromJust, fromMaybe)
+import Data.Either
 
 import Control.Monad.State
 import Data.Monoid ((<>))
 
+
+-- Internal
 import Note hiding (runWith)
 
 import UI.Types as Types
 import VMap (HashAlg)
+import Helpers
+import Note.Trans
+
 
 chunk_size = 32768 -- 2 ^ 15
 recv_timeout = 1000000
@@ -175,26 +181,26 @@ eserver = do
             setRecvTimeout client recv_timeout
             (contents, len) <- recvAll client
             putStrLn $ "received payload of length " ++ show len
-            let mNote = do cmd <- (A.decode contents :: Maybe Cmd)
-                           noteS <- case runeCmd cmd of 
-                                      Right x -> Just x
-                                      Left _ -> Nothing
-                           return noteS
-                mRes = sequence $ (flip runWith n) <$> mNote
-
-            mRes' <- mRes
-            putStrLn $ show mRes'
-            let ret = do (mST, nextState) <- mRes'
-                         st <- mST
-                         return (st, nextState)
-            case ret of
-              Just (st, nextState) -> do NBL.sendAll client . encode . A.encode $ st
-                                         close client
-                                         putStrLn "looping newstate"
-                                         loop nextState
-              Nothing -> if "exit" `BLC8.isPrefixOf` contents 
-                            then do { close client; close sock }
-                            else do { close client; putStrLn "looping" ; loop n }
+            let eCmd = maybeToEither (A.decode contents :: Maybe Cmd)
+                eNote = eCmd >>= runeCmd
+                mRes = (flip runWith' n) <$> eNote
+                mTup :: IO (Either String (Maybe ST, Note'))
+                mTup = fmap join $ sequence $ (flip runWith' n) <$> eNote
+            tup <- mTup
+            case tup of
+              Left err -> do print err
+                             NBL.sendAll client . encode $ err
+                             close client
+                             putStrLn "looping newstate--lerr"
+                             loop n
+              Right (Just st, n') -> do NBL.sendAll client . encode . A.encode $ st
+                                        close client
+                                        putStrLn "looping newstate"
+                                        loop n'
+              Right (Nothing, state) -> 
+                  if "exit" `BLC8.isPrefixOf` contents 
+                     then do { close client; close sock }
+                     else do { close client; putStrLn "looping" ; loop n }
 
     let intHandler :: Handler
         intHandler = Catch $ do 
@@ -207,7 +213,7 @@ eserver = do
     installHandler sigINT intHandler Nothing
 
     loop note'
-
+    close sock
 
 
 showSock sock = do
@@ -292,31 +298,11 @@ send' (sock, sockAddr) = do
 
 sendCmd :: (Socket, SockAddr) -> Cmd -> IO (Maybe (ServiceTypes SHA1))
 sendCmd (sock, _) cmd = do
---    putStrLn "please enter '>host port'"
---    putStr ">"
---    ws <- words <$> getLine
---    let host = ws !! 0
---        port = ws !! 1
-    --     kjj
-    let enc = encode . A.encode
-        sendAll' sock msg = 
-            do bytes <- NBL.send sock msg
-               if bytes < (BL.length msg)
-                  then sendAll' sock (BL.drop bytes msg) 
-                  else return ()
-    sendAll' sock $ enc cmd
+    NBL.sendAll sock . encode $ A.encode cmd 
     putStrLn "sent!"
-    let recv'' = do  blen <- NBL.recv sock 8
-                     rest <- NBL.recv sock . fromIntegral $ (decode blen :: Int64)
-                     return rest
---    first <- recv''
---    print first
---    second <- recv''
---    print second
     (contents, _) <- recvAll sock
     BLC8.putStrLn contents
     close sock
-
     return (A.decode contents :: Maybe (ServiceTypes SHA1))
 
 oas :: Cmd -> IO (Maybe (ServiceTypes SHA1))

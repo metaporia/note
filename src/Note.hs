@@ -51,7 +51,6 @@ import Val
 import Select
 import UI.Vi
 
-
 data Note alg c = 
     Note { getLinks :: Links alg 
          , getVMap :: VMap alg c

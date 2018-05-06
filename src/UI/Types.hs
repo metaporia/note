@@ -37,6 +37,12 @@ import Data.ByteArray (convert, ByteArrayAccess)
 
 import qualified Data.Binary as BIN
 
+import Control.Monad.Trans.Either
+import Control.Monad.Trans.State (StateT, runStateT)
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Identity
+
+
 import GHC.Generics
 
 import Link
@@ -48,7 +54,32 @@ import Val
 import Select
 import UI.Vi
 import Note
+import Note.Trans
 
+type Note' = Note SHA1 T.Text
+type ST = ServiceTypes SHA1
+-- transformer ordering case one
+newtype NoteS' err a = NoteS' { getNoteS' :: StateT Note' (EitherT err IO) a }
+    deriving (Functor, Applicative, Monad, MonadIO, MonadState (Note SHA1 T.Text))
+
+emptyNoteS' :: NoteS' err ()
+emptyNoteS' = put newNote 
+ 
+runNoteS' :: NoteS' err a-> Note' -> IO (Either err (a, Note'))
+runNoteS' = (runEitherT .) . runStateT . getNoteS'
+
+runWith' m s = runNoteS' m s
+
+ 
+
+derefKey :: ST -> NoteS' String (Maybe (ServiceTypes SHA1))
+derefKey st = do
+    n@(Note lnk vm abbr sm) <- get
+    let mK = getKey st
+        bs = mK >>= fmap Blob' . deref vm 
+    x <- liftIO $ putStrLn $ show bs
+    put n
+    return bs
 
 apply0 = const
 
@@ -130,13 +161,15 @@ getErr _ = Nothing
 
 
 ecmds :: (Ord k, IsString k) 
-      =>  M.Map k ([ServiceTypes SHA1] -> Either String (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
-ecmds = M.fromList [ ("loadf", apply' loadf'')
-                    , ("deref", apply' derefAbbr'')
+      =>  M.Map k ([ST] -> Either String (NoteS' String (Maybe ST)))
+ecmds = M.fromList [ ("derefK", apply' derefKey)
+                   , ("loadf", apply' eloadf)
+                   , ("deref", apply' ederefAbbr)]
+                       {-
                     , ("link", apply2' linkAbbr'')
-                    , ("derefK", apply' derefKey'')
                     ] -- add number of arguments expected to tuple (threeple, rly).
                    
+                   -}
 
 
 
@@ -162,7 +195,7 @@ runCmd' (Cmd cmd args) =
     let f = M.lookup cmd cmds''
      in f >>=  \f' -> f' args
 
-runeCmd :: Cmd -> Either String (NoteS SHA1 (Maybe (ServiceTypes SHA1)))
+runeCmd :: Cmd -> Either String (NoteS' String (Maybe ST))
 runeCmd (Cmd cmd args) = 
     let f = M.lookup cmd ecmds
      in case f of 
@@ -214,6 +247,22 @@ loadf'' st = do
       Nothing -> do put n
                     return Nothing
 
+-- | Load a file into state.
+eloadf :: ST -> NoteS' String (Maybe ST)
+eloadf st = do
+    let f :: Maybe String
+        f = T.unpack <$> (getBlob st) 
+    mText <- liftIO $ sequence (f >>= return . TIO.readFile)
+    n@(Note lnk vm abbr sm) <- get
+    case mText of 
+      Just contents -> do let (vm', mK) = insertRawBlob (fromJust mText) vm
+                              lbs = fmap (Key' . toAesonKey) mK
+                          put (Note lnk vm' abbr sm)
+                          return lbs
+      Nothing -> do put n
+                    return Nothing
+
+
 
 derefAbbr' :: HashAlg alg =>  T.Text -> NoteS alg (Maybe L.ByteString)
 derefAbbr' t = do
@@ -232,6 +281,17 @@ derefAbbr'' st = do
     x <- liftIO $ putStrLn $ show bs
     put n
     return bs
+
+ederefAbbr :: ST -> NoteS' String (Maybe ST)
+ederefAbbr st = do
+    n@(Note lnk vm abbr sm) <- get
+    let mAbr = getBlob st
+        mK = mAbr >>= ( \a -> lengthen abbr a)
+        bs = mK >>= deref vm 
+    x <- liftIO $ putStrLn $ show bs
+    put n
+    return $ fmap Blob' bs
+
 
 derefKey'' :: ServiceTypes SHA1 -> NoteS SHA1 (Maybe (ServiceTypes SHA1))
 derefKey'' st = do

@@ -29,3 +29,8 @@ eitherToMaybe :: Either l r -> Maybe r
 eitherToMaybe (Left l) = Nothing
 eitherToMaybe (Right r) = Just r
 
+maybeToEither :: Monoid l => Maybe r -> Either l r
+maybeToEither (Just r) = Right r
+maybeToEither Nothing = Left mempty
+
+
