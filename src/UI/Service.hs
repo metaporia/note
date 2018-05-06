@@ -203,18 +203,20 @@ eserver = do
                                    putStrLn "looping newstate"
                                    loop n'
 
-    let intHandler :: Handler
-        intHandler = Catch $ do 
-                E.throwTo tid E.UserInterrupt
-                close sock
-                putStrLn "caught SIGINT; closed sock"
-                --putMVar this ()
+    let        --putMVar this ()
 
 
-    installHandler sigINT intHandler Nothing
+    installHandler sigINT (handleInterrupt tid sock) Nothing
 
     loop note'
     close sock
+
+handleInterrupt :: ThreadId -> Socket -> Handler
+handleInterrupt tid sock = Catch $ do 
+    E.throwTo tid E.UserInterrupt
+    close sock
+    putStrLn "caught SIGINT; closed sock"
+
 
 eserve :: IO ()
 eserve = do
@@ -223,12 +225,8 @@ eserve = do
     setSocketOption sock ReuseAddr 1
     bind sock (SockAddrInet 4242 iNADDR_ANY)
     listen sock 10
-    let intHandler :: Handler
-        intHandler = Catch $ do 
-                E.throwTo tid E.UserInterrupt
-                close sock
-                putStrLn "caught SIGINT; closed sock"
-    installHandler sigINT intHandler Nothing
+    installHandler sigINT (handleInterrupt tid sock) Nothing
+    -- this bad boy of a line does it all
     e <- runWith' (loop' sock note') newNote -- 
     
     case e of
