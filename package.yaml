@@ -40,6 +40,7 @@ dependencies:
 - tostring
 - base64-bytestring
 - unix
+- either
 library:
   source-dirs: 
       - src
@@ -57,6 +58,7 @@ library:
       - Note
       - Abbrev
       - Parse
+      - Note.Trans
   other-modules:
 
 executables:

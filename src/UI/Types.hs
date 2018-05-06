@@ -57,10 +57,22 @@ apply f xs = if not (null xs)
                 then Just $ f (head xs)
                 else Nothing
 
+apply' :: (a -> b) -> [a] -> Either String b
+apply' f xs = if not (null xs)
+                then Right $ f (head xs)
+                else Left "expected at least one argument"
+
+
 apply2 :: (a -> a -> b) -> [a] -> Maybe b
 apply2 f xs = do
     xs' <- hasLen xs 2
     return $ f (xs' !! 0) (xs' !! 1)
+
+apply2' :: (a -> a -> b) -> [a] -> Either String b
+apply2' f xs = do
+    xs' <- hasLen' xs 2
+    return $ f (xs' !! 0) (xs' !! 1)
+
 
 apply3 f xs = do
     xs' <- hasLen xs 3
@@ -72,6 +84,16 @@ hasLen xs n =
      in if length xs >= n
            then Just xs'
            else Nothing
+
+hasLen' :: [a] -> Int -> Either String [a]
+hasLen' xs n = 
+    let xs' = take n xs
+     in if length xs >= n
+           then Right xs'
+           else Left $ "expected argument list of length " ++ show n
+                       ++ "but instead received one of length " 
+                       ++ show (length xs)
+
 
 data ServiceTypes alg = Blob' T.Text
               | Span' (AesonKey alg) Selection
@@ -107,6 +129,16 @@ getErr _ = Nothing
 
 
 
+ecmds :: (Ord k, IsString k) 
+      =>  M.Map k ([ServiceTypes SHA1] -> Either String (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
+ecmds = M.fromList [ ("loadf", apply' loadf'')
+                    , ("deref", apply' derefAbbr'')
+                    , ("link", apply2' linkAbbr'')
+                    , ("derefK", apply' derefKey'')
+                    ] -- add number of arguments expected to tuple (threeple, rly).
+                   
+
+
 
 cmds'' :: (Ord k, IsString k) 
        =>  M.Map k ([ServiceTypes SHA1] -> Maybe (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
@@ -129,6 +161,15 @@ runCmd' :: Cmd -> Maybe (NoteS SHA1 (Maybe (ServiceTypes SHA1)))
 runCmd' (Cmd cmd args) = 
     let f = M.lookup cmd cmds''
      in f >>=  \f' -> f' args
+
+runeCmd :: Cmd -> Either String (NoteS SHA1 (Maybe (ServiceTypes SHA1)))
+runeCmd (Cmd cmd args) = 
+    let f = M.lookup cmd ecmds
+     in case f of 
+          Just f' -> f' args
+          Nothing -> Left "cmd not found."
+
+
 
 
 

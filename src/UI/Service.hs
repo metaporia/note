@@ -157,6 +157,58 @@ server' = do
 
     loop note'
 
+eserver :: IO ()
+eserver = do
+    tid <- myThreadId
+    --this <- newEmptyMVar
+    sock <- socket AF_INET Stream 0
+    setSocketOption sock ReuseAddr 1
+    bind sock (SockAddrInet 4242 iNADDR_ANY)
+    listen sock 10
+    -- (posix) system signal handling
+    let loop n = do
+            (client, _) <- accept sock
+            --clientHandle <- socketToHandle client ReadMode 
+            --hSetBuffering clientHandle NoBuffering
+            ---
+            
+            setRecvTimeout client recv_timeout
+            (contents, len) <- recvAll client
+            putStrLn $ "received payload of length " ++ show len
+            let mNote = do cmd <- (A.decode contents :: Maybe Cmd)
+                           noteS <- case runeCmd cmd of 
+                                      Right x -> Just x
+                                      Left _ -> Nothing
+                           return noteS
+                mRes = sequence $ (flip runWith n) <$> mNote
+
+            mRes' <- mRes
+            putStrLn $ show mRes'
+            let ret = do (mST, nextState) <- mRes'
+                         st <- mST
+                         return (st, nextState)
+            case ret of
+              Just (st, nextState) -> do NBL.sendAll client . encode . A.encode $ st
+                                         close client
+                                         putStrLn "looping newstate"
+                                         loop nextState
+              Nothing -> if "exit" `BLC8.isPrefixOf` contents 
+                            then do { close client; close sock }
+                            else do { close client; putStrLn "looping" ; loop n }
+
+    let intHandler :: Handler
+        intHandler = Catch $ do 
+                E.throwTo tid E.UserInterrupt
+                close sock
+                putStrLn "caught SIGINT; closed sock"
+                --putMVar this ()
+
+
+    installHandler sigINT intHandler Nothing
+
+    loop note'
+
+
 
 showSock sock = do
     isc <- isConnected sock
