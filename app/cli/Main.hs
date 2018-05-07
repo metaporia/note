@@ -26,6 +26,7 @@ import System.Process (system)
 import System.Console.Haskeline
 import Data.Maybe
 import Data.List
+import Data.Either (rights)
 
 
 parseCmd' :: Parser String
@@ -64,9 +65,47 @@ pSpan' = undefined --Span' <$>
 
 cons head tail = head : tail
 pCmd :: Parser Cmd
-pCmd = let ps = map try [parseAlias, parseLink, parseDeref, parseDerefK, parseLoadf, parseAbbr, parseLslnk, parseLsvm]
+pCmd = let ps = map try [ parseAlias
+                        , parseLink
+                        , parseDeref
+                        , parseDerefK
+                        , parseLoadf
+                        , parseAbbr
+                        , parseLslnk
+                        , parseLsvm
+                        , parseAbbrKeys
+                        , parseVmKeys
+                        , parseLinksFrom
+                        , parseLinksTo
+                        , parseLinksFromK
+                        , parseLinksToK
+                        ]
         in choice ps <* skipMany (oneOf "\n ")
 
+parseLinksFromK :: Parser Cmd
+parseLinksFromK = Cmd <$> cmd "linksfromK" <* skip (char ' ')
+                     <*> fmap (return . Key' . AesonKey . T.pack) (some (noneOf "\n "))
+
+parseLinksToK :: Parser Cmd
+parseLinksToK = Cmd <$> cmd "linkstoK" <* skip (char ' ')
+                     <*> fmap (return . Key' . AesonKey . T.pack) (some (noneOf "\n "))
+
+
+parseLinksFrom :: Parser Cmd
+parseLinksFrom = Cmd <$> cmd "linksfrom" <* skip (char ' ')
+                     <*> fmap (return . Abbr . T.pack) (some (noneOf "\n "))
+
+parseLinksTo :: Parser Cmd
+parseLinksTo = Cmd <$> cmd "linksto" <* skip (char ' ')
+                   <*> fmap (return . Abbr . T.pack) (some (noneOf "\n "))
+
+parseAbbrKeys :: Parser Cmd
+parseAbbrKeys = Cmd <$> cmd "abbrkeys" <* skipMany (char ' ')
+                    <*> fmap (return . Err . T.pack. ("unused arg: "++)) (many (noneOf "\n "))
+
+parseVmKeys :: Parser Cmd
+parseVmKeys = Cmd <$> cmd "vmkeys" <* skipMany (char ' ')
+                    <*> fmap (return . Err . T.pack. ("unused arg: "++)) (many (noneOf "\n "))
 
 parseAlias :: Parser Cmd
 parseAlias = Cmd <$> cmd "alias" <* skip (char ' ')
@@ -74,7 +113,7 @@ parseAlias = Cmd <$> cmd "alias" <* skip (char ' ')
                             <*> fmap (return . Key' . AesonKey . T.pack)  (some (noneOf "\n ")))
 parseLink :: Parser Cmd
 parseLink = Cmd <$> cmd "link" <* skip (char ' ')
-                <*> fmap (return . Abbr . T.pack) (count 2 (noneOf "\n "))
+                <*> fmap (fmap $ Abbr . T.pack) (count 2 $ parseArgNoneBut)
 parseDeref :: Parser Cmd
 parseDeref = Cmd <$> (fmap T.pack $ (string "deref" <* skip (char ' '))) 
                  <*> (fmap (return . Abbr . T.pack) (some (noneOf "\n ")))
@@ -91,9 +130,6 @@ parseLoadf = Cmd <$> (fmap T.pack $ (string "loadf" <* skip (char ' ')))
                  <*> (fmap (return . Blob' . T.pack) (some (noneOf "\n ")))
 
 
-cmd :: String -> Parser T.Text
-cmd w = fmap T.pack (string w) 
-
 parseAbbr :: Parser Cmd
 parseAbbr = Cmd <$> cmd "abbr" <* skip (char ' ')
                 <*> (fmap (return . Key' . AesonKey . T.pack) 
@@ -106,6 +142,16 @@ parseLslnk = Cmd <$> cmd "lslnk"
 parseLsvm :: Parser Cmd
 parseLsvm = Cmd <$> cmd "lsvm"
                 <*> fmap (return . Err . T.pack. ("unused arg: "++)) (many (noneOf "\n "))
+
+
+cmd :: String -> Parser T.Text
+cmd w = fmap T.pack (string w) 
+
+
+
+
+
+
 
 
 
@@ -220,22 +266,30 @@ cmds = [ "deref"
        , "derefK"
        , "alias"
        , "abbr"
-       , "lsvm"
-       , "lslnk"
        , "loadf"
+       , "link"
+       , "lslnk"
+       , "lsvm"
+       , "linksto"
+       , "linkstoK"
+       , "linksfrom"
+       , "linksfromK"
+       , "vmkeys"
+       , "abbrkeys"
        ]
-comp = ("??", map simpleCompletion cmds)
+
 wordCompleter :: String -> IO [Completion]
 wordCompleter s = do
-    ks <- getKeys
-    let matches = filter (isPrefixOf s) (cmds ++ ks)
+    vm <- getVMKeys
+    abbr <- getAbbrevKeys
+    let matches = filter (isPrefixOf s) (cmds ++ vm ++ abbr)
     
     return $ map simpleCompletion matches
 
 
 -- fetch a list of all keys in the current VMap
-getKeys :: IO [String]
-getKeys = do
+getVMKeys :: IO [String]
+getVMKeys = do
     mST <- oas' (Cmd "vmkeys" [])
     let st = case mST of
                 Just x  -> x
@@ -243,8 +297,22 @@ getKeys = do
         ret = case st of
                 List ks -> ks
                 Nil -> []
-                
-    return (map (T.unpack . (\(Key' (AesonKey k))-> k))  ret)
+        ks = rights $ map (\(Key' ak) -> fromAesonKey ak) ret
+    return $ map (show) ks
+
+-- fetch a list of all keys in the current VMap
+getAbbrevKeys :: IO [String]
+getAbbrevKeys = do
+    mST <- oas' (Cmd "abbrkeys" [])
+    let st = case mST of
+                Just x  -> x
+                Nothing -> Nil
+        ret = case st of
+                List ks -> ks
+                Nil -> []
+    return (map (T.unpack . (\(Abbr k) -> k))  ret)
+
+
 
 
 

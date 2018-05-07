@@ -116,7 +116,11 @@ loop' sock  n = do
 
     liftIO $ close sock
     return ()
+f :: IO ()
+f = do
+    (sock, _)  <- accept client
 
+    return ()
 
 -- | Embed application of 'Cmd' inside 'NoteS' state.
 handleCmd :: Either String Cmd -> NoteS String ST 

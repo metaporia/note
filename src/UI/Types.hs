@@ -45,6 +45,7 @@ import Control.Monad.Except
 
 import Control.Exception
 
+import Data.Monoid ((<>))
 
 import GHC.Generics
 
@@ -57,7 +58,7 @@ import Helpers (Key, eitherToMaybe, maybeToEither, convertException)
 import Val
 import Select
 import UI.Vi
-import Note hiding (lsvm, lslnk)
+import Note hiding (lsvm, lslnk, link)
 
 type Note' = Note SHA1 T.Text
 type ST = ServiceTypes SHA1
@@ -169,12 +170,18 @@ ecmds :: (Ord k, IsString k)
 ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("loadf", apply' loadf)
                    , ("deref", apply' derefAbbr)
-                   , ("abbrev",  apply' abbr)
+                   , ("abbr",  apply' abbr)
                    , ("lsvm",  const (return lsvm))
                    , ("lslnk", const (return lslnk))
                    , ("alias", apply2' alias)
                    , ("vmkeys", const (return vmkeys))
-                   , ("link", apply2' linkAbbr) ]
+                   , ("abbrkeys", const (return abbrkeys))
+                   , ("linksto", apply' linksto)
+                   , ("linkstoK", apply' linkstoK)
+                   , ("linksfrom", apply' linksfrom)
+                   , ("linksfromK", apply' linksfromK)
+                   , ("linkK", apply2' linkK) 
+                   , ("link", apply2' link) ]
 
 alias :: ST -> ST -> NoteS String ST
 alias st st' = do
@@ -185,14 +192,36 @@ alias st st' = do
     put (Note lnk vm abbr' sm)
     return $ Msg "alias successfully registered"
 
-linkAbbr :: ST -> ST -> NoteS String ST
-linkAbbr st st' = do
+linkK :: ST -> ST -> NoteS String ST
+linkK st st' = do
     n@(Note lnk vm abbr sm) <- get
     s <- liftEither $ Subj <$> getKey st
     o <- liftEither $ Obj <$> getKey st'
     let lnkr' = Link.insert s o lnk
     put (Note lnkr' vm abbr sm)
     return $ Msg "link successfuly registered"
+
+link :: ST -> ST -> NoteS String ST
+link st st' = do
+    n@(Note lnk vm abbr sm) <- get
+    s <- liftEither $ getAbbr st
+    o <- liftEither $ getAbbr st'
+
+    let lengthen' k = liftEither $ case lengthen abbr s of 
+                                     Just k -> Right k 
+                                     Nothing -> Left "no key matching abbr found"
+        toKey t = liftEither $ case textToKey t of
+                    Just k -> Right k
+                    Nothing -> Left "could not convert text to 'Key'"
+
+    st <- lengthen' s
+    ot <- lengthen' o
+                
+
+    let lnkr' = Link.insert (Subj st) (Obj ot) lnk
+    put (Note lnkr' vm abbr sm)
+    return . Msg $ s <> " successfuly linked to " <> o
+
 
 
 derefAbbr :: ST -> NoteS String ST
@@ -258,6 +287,79 @@ vmkeys = do
     let x = appVM M.keys $ getVMap note
     put note
     return . List $ map (Key' . toAesonKey) x
+
+abbrkeys :: NoteS String ST
+abbrkeys = do
+    note <- get
+    let x = getAbbrKeys $ getAbbrev note
+    put note
+    return . List $ map Abbr x
+
+-- abbrs
+linksto :: ST -> NoteS String ST
+linksto st = do
+    note <- get
+    abbr <- liftEither $ getAbbr st
+    obj <- liftEither $ 
+        case lengthen (getAbbrev note) abbr of
+          Just k -> Right $ Obj k
+          Nothing -> Left "could not find key matching abbr"
+    let subjs =  linksTo (getLinks note) obj
+    put note
+    return . List $ map (\(Subj k) -> Abbr . take' 7 $ keyToText k) subjs
+
+-- keys
+linkstoK :: ST -> NoteS String ST
+linkstoK st = do
+    note <- get
+    key <- liftEither $ getKey st
+    let obj = Obj key
+        subjs =  linksTo (getLinks note) obj
+    put note
+    return . List $ map (\(Subj k) -> Key' . toAesonKey $ k) subjs
+
+            
+linksfrom :: ST -> NoteS String ST
+linksfrom st = do
+    note <- get
+    abbr <- liftEither $ getAbbr st
+    subj <- liftEither $ 
+        case lengthen (getAbbrev note) abbr of
+          Just k -> Right $ Subj k
+          Nothing -> Left "could not find key matching abbr"
+    let objs =  linksFrom (getLinks note) subj
+    put note
+    return . List $ map (\(Obj k) -> Abbr . take' 7 $ keyToText k) objs
+
+linksfromK :: ST -> NoteS String ST
+linksfromK st = do
+    note <- get
+    key <- liftEither $ getKey st
+    let subj = Subj key
+        objs =  linksFrom (getLinks note) subj
+    put note
+    return . List $ map (\(Obj k) -> Key' . toAesonKey $ k) objs
+
+            
+        
+            
+        
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+
+
 
 
 -- Encoding

@@ -36,6 +36,7 @@ instance Abbrev ShortKeys T.Text where
          in ShortKeys n m'
     lengthen  (ShortKeys n m) t = M.lookup t m
     newAbbrevStore = newShortKeys 
+    getAbbrKeys (ShortKeys n m) = M.keys m
 
 --instance Abbrev Note T.Text where
 --    abbrev k = state $ 
@@ -57,6 +58,7 @@ class Splittable c => Abbrev (a :: * -> * -> *) c where
     lengthen :: HashAlg alg
              => a alg c  -> c -> Maybe (Key alg)
     newAbbrevStore :: Int -> a alg c 
+    getAbbrKeys :: a alg c -> [c]
 
 -- The next step, after 'load'--imagine the user has loaded several blobs, which they
 -- would likely next wish to link together. If only they had access to such
