@@ -14,7 +14,6 @@ import Text.RawString.QQ
 import Control.Monad.State
 import Control.Monad.State.Class
 import Control.Monad.Trans.Maybe
-
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO

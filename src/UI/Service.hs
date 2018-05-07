@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module UI.Service (server, server', oas, module Types) where
+module UI.Service (serve, oas, module Types) where
 
 import qualified Network.Socket as Sock
 import Network.Socket.Options
@@ -17,7 +17,6 @@ import Data.ByteString.Conversion
 import Data.ByteString.Builder
 
 import System.Posix.Signals
-
 
 import Crypto.Hash 
 
@@ -52,8 +51,11 @@ import Control.Monad.Except
 
 
 -- Internal
-import Note hiding (runWith)
-
+import Note hiding ( runWith
+                   , lsvm
+                   , lslnk
+                   , alias
+                   )
 import UI.Types as Types
 import VMap (HashAlg)
 import Helpers
@@ -68,158 +70,14 @@ encode' = A.encode
 decode' :: FromJSON a => BL.ByteString -> Maybe a
 decode' = A.decode
 
-server :: IO ()
-server = undefined {-do
-    sock <- socket AF_INET Stream 0
-    setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
-    listen sock 10
-    forever $ do
-        (client, _) <- accept sock
-        --clientHandle <- socketToHandle client ReadMode 
-        --hSetBuffering clientHandle NoBuffering
-        setRecvTimeout client recv_timeout
-        forkIO $ do
-            (contents, len) <- recvAll client
-            putStrLn $ "received payload of length " ++ show len
-            case (A.decode contents :: Maybe Cmd) of
-              Just cmd -> do BLC8.putStrLn contents 
-                             print cmd
-                             if getCmd cmd == "deref" 
-                                then let s =  show . fst $ runState (derefAbbrNS (getArgs cmd !! 0)) note'
-                                         arg0 = case null (getArgs cmd) of
-                                                    False -> Just $ getArgs cmd !! 0
-                                                    True -> Nothing
-                                         t :: T.Text
-                                         t = case lookupRun (getCmd cmd) (fromMaybe "" arg0) note' of
-                                               Just x -> x
-                                               Nothing -> "Lookup failed"
-                                      in (print $ "abbr derefed. sending\n")
-                                         *> NBL.send client (encode t) *> return ()
-                                else return ()
-              Nothing -> print contents
-            bytes <- NBL.send client . encode $ "ack " `mappend` toByteString' len
-            putStrLn ""
-            close client
-            --hClose clientHandle 
-            -}
-
-ex = do
-    tid <- myThreadId
-    sock <- socket AF_INET Stream 0
-    setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
-    listen sock 2
-
-    installHandler sigINT (Catch (do E.throwTo tid E.UserInterrupt
-                                     close sock)) Nothing
-    threadDelay 5000000
-    
-server' :: IO ()
-server' = do
-    tid <- myThreadId
-    --this <- newEmptyMVar
-    sock <- socket AF_INET Stream 0
-    setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
-    listen sock 10
-    -- (posix) system signal handling
-    let loop n = do
-            (client, _) <- accept sock
-            --clientHandle <- socketToHandle client ReadMode 
-            --hSetBuffering clientHandle NoBuffering
-            ---
-            
-            setRecvTimeout client recv_timeout
-            (contents, len) <- recvAll client
-            putStrLn $ "received payload of length " ++ show len
-            let mNote = do cmd <- (A.decode contents :: Maybe Cmd)
-                           noteS <- runCmd' cmd
-                           return noteS
-                mRes = sequence $ (flip runWith n) <$> mNote
-
-            mRes' <- mRes
-            putStrLn $ show mRes'
-            let ret = do (mST, nextState) <- mRes'
-                         st <- mST
-                         return (st, nextState)
-            case ret of
-              Just (st, nextState) -> do NBL.sendAll client . encode . A.encode $ st
-                                         close client
-                                         putStrLn "looping newstate"
-                                         loop nextState
-              Nothing -> if "exit" `BLC8.isPrefixOf` contents 
-                            then do { close client; close sock }
-                            else do { close client; putStrLn "looping" ; loop n }
-
-    let intHandler :: Handler
-        intHandler = Catch $ do 
-                E.throwTo tid E.UserInterrupt
-                close sock
-                putStrLn "caught SIGINT; closed sock"
-                --putMVar this ()
-
-
-    installHandler sigINT intHandler Nothing
-
-    loop note'
-
-eserver :: IO ()
-eserver = do
-    tid <- myThreadId
-    --this <- newEmptyMVar
-    sock <- socket AF_INET Stream 0
-    setSocketOption sock ReuseAddr 1
-    bind sock (SockAddrInet 4242 iNADDR_ANY)
-    listen sock 10
-    -- (posix) system signal handling
-    --  can loop be rewritten in the NoteS' monad?
-    let loop :: Note' -> IO ()
-        loop n = do
-            (client, _) <- accept sock
-            --clientHandle <- socketToHandle client ReadMode 
-            --hSetBuffering clientHandle NoBuffering
-            ---
-            
-            setRecvTimeout client recv_timeout
-            (contents, len) <- recvAll client
-            putStrLn $ "received payload of length " ++ show len
-            let eCmd = maybeToEither (A.decode contents :: Maybe Cmd)
-                eNote = eCmd >>= runeCmd
-                mRes = (flip runWith' n) <$> eNote
-                embedded :: IO (Either String (ST, Note'))
-                embedded = runWith' (handleCmd eCmd) n
-            eTup <- embedded
-            case eTup of
-              -- 'apply' err
-              Left err -> do print err
-                             NBL.sendAll client . encode . A.encode . Err $ T.pack err
-                             close client
-                             putStrLn "looping newstate--lerr"
-                             loop n
-              -- success case
-              Right (st, n') -> do NBL.sendAll client . encode . A.encode $ st
-                                   close client
-                                   putStrLn "looping newstate"
-                                   loop n'
-
-    let        --putMVar this ()
-
-
-    installHandler sigINT (handleInterrupt tid sock) Nothing
-
-    loop note'
-    close sock
-
 handleInterrupt :: ThreadId -> Socket -> Handler
 handleInterrupt tid sock = Catch $ do 
     E.throwTo tid E.UserInterrupt
     close sock
     putStrLn "caught SIGINT; closed sock"
 
-
-eserve :: IO ()
-eserve = do
+serve :: IO ()
+serve = do
     tid <- myThreadId
     sock <- socket AF_INET Stream 0
     setSocketOption sock ReuseAddr 1
@@ -227,7 +85,7 @@ eserve = do
     listen sock 10
     installHandler sigINT (handleInterrupt tid sock) Nothing
     -- this bad boy of a line does it all
-    e <- runWith' (loop' sock note') newNote -- 
+    e <- runWith' (loop' sock note') newNote -- TODO: parameterize
     
     case e of
       Left err -> print err
@@ -235,14 +93,14 @@ eserve = do
 
     close sock
             
-loop' :: Socket -> Note' -> NoteS' String ()
+loop' :: Socket -> Note' -> NoteS String ()
 loop' sock  n = do
     (client, _ ) <- liftIO $ accept sock
     liftIO $ setRecvTimeout client recv_timeout
     (contents, len) <- liftIO $ recvAll client
     liftIO . putStrLn $ "received payload of length " ++ show len
     cmd <- liftEither . maybeToEither $ (A.decode contents :: Maybe Cmd)
-    noteS <- liftEither $ runeCmd cmd
+    noteS <- liftEither $ runCmd cmd
     e <- liftIO $ runWith' noteS n
     case e of
       Left err -> do liftIO $print err
@@ -256,20 +114,16 @@ loop' sock  n = do
                            let x = runWith' (loop' sock n) n
                            loop' sock n'
 
-    
-
+    liftIO $ close sock
     return ()
-    
-    
 
 
-
--- | Embed application of 'Cmd' inside 'NoteS'' state.
-handleCmd :: Either String Cmd -> NoteS' String ST 
+-- | Embed application of 'Cmd' inside 'NoteS' state.
+handleCmd :: Either String Cmd -> NoteS String ST 
 handleCmd eCmd = do
     n <- get
     cmd <- liftEither eCmd
-    noteS <- liftEither $ runeCmd cmd
+    noteS <- liftEither $ runCmd cmd
     e <- liftIO $ runWith' noteS n
     (st, n') <- liftEither e
     put n'
@@ -287,33 +141,6 @@ showSock sock = do
 
 contents = encode . A.encode $ Blob' "AOEuhaoeuaoeuaoeu"
 cmd' = encode . A.encode $ Cmd "deref" [Blob' "spec"]
-
-test :: IO (ServiceTypes SHA1, Note SHA1 T.Text)
-test = do
-    -- we're in the 'Maybe' monad here
-    let mNote = do cmd <- (A.decode (decode cmd' :: BLC8.ByteString) :: Maybe (Cmd))
-                   noteS <- (runCmd' cmd :: Maybe (NoteS SHA1 (Maybe (ServiceTypes SHA1))))
-                   return noteS
-        mRes = (runWith <$> mNote) <*> Just note'
---    putStrLn $ show mRes'
-    let ret = 
-            case mRes of 
-              Nothing -> do putStrLn "arg error. see applyN"
-                            putStrLn "nthing case"
-                            return (Err "eaou", note')
-              Just ioval -> do (mST, nextNote) <- ioval
-                               putStrLn $ show mST
-                               return (fromMaybe (Err "no ServiceType available") mST, nextNote)
-
-    (sts, next) <- ret
-    putStrLn $ "about to send: " ++ (show sts)
-    return (sts, next)
-       
-runWith :: NoteS SHA1 (Maybe (ServiceTypes SHA1))
-        -> Note SHA1 T.Text 
-        -> IO (Maybe (ServiceTypes SHA1), Note SHA1 T.Text)
-runWith noteS s = runNoteS noteS s
-
 
 shutdownServer :: Socket -> IO ()
 shutdownServer sock = NBL.sendAll sock (encode ("exit":: BL.ByteString) :: BL.ByteString)
@@ -334,26 +161,6 @@ openAndConn host port = do
     
     connect sock sockAddr
     return (sock, sockAddr)
-
-
-send' :: (Socket, SockAddr) -> IO (Socket, SockAddr)
-send' (sock, sockAddr) = do
---    putStrLn "please enter '>host port'"
---    putStr ">"
---    ws <- words <$> getLine
---    let host = ws !! 0
---        port = ws !! 1
-    --     kjj
-    msg' <- B.readFile "specificity.md"
-    let sendAll' sock msg = 
-            do bytes <- NBL.send sock msg
-               if bytes < (BL.length msg)
-                  then sendAll' sock (BL.drop bytes msg) 
-                  else return ()
-    sendAll' sock (pack' msg')
-    putStrLn "sent!"
-    return (sock, sockAddr)
-
 
 sendCmd :: (Socket, SockAddr) -> Cmd -> IO (Maybe (ServiceTypes SHA1))
 sendCmd (sock, _) cmd = do

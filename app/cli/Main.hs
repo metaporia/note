@@ -59,7 +59,7 @@ parseCusCmd cmdStr nargs =
     <* eof
 -}
 main :: IO ()
-main = server'
+main = serve
 {-
 c = try (parseCusCmd "command" 2) <?> "command <arg> <arg>\\n" 
 d = try (parseCusCmd "eal" 3) <?> "eal <arg> <arg> <arg>\\n"
