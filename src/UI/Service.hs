@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module UI.Service (serve, oas, module Types) where
+module UI.Service (serve, oas, oas', module Types) where
 
 import qualified Network.Socket as Sock
 import Network.Socket.Options
@@ -176,6 +176,22 @@ oas cmd = do
     conn <- openAndConn "localhost" "4242"
     mST <- sendCmd conn cmd
     return mST
+
+oas' :: Cmd -> IO (Maybe (ServiceTypes SHA1))
+oas' cmd = do
+    conn <- openAndConn "localhost" "4242"
+    mST <- sendCmd' conn cmd
+    return mST
+
+
+sendCmd' :: (Socket, SockAddr) -> Cmd -> IO (Maybe (ServiceTypes SHA1))
+sendCmd' (sock, _) cmd = do
+    NBL.sendAll sock . encode $ A.encode cmd 
+    --putStrLn "sent!"
+    (contents, _) <- recvAll sock
+    --BLC8.putStrLn contents
+    close sock
+    return (A.decode contents :: Maybe (ServiceTypes SHA1))
 
 
 -- NB:

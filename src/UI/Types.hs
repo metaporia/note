@@ -22,7 +22,7 @@ import Data.String.ToString (toString)
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as LIO
 import qualified Data.ByteString as B
-import Data.ByteString.Conversion
+import Data.ByteString.Conversion hiding (List)
 
 import qualified Data.ByteString.Base64 as Base64
 
@@ -114,6 +114,8 @@ data ServiceTypes alg = Blob' T.Text
               | Ls T.Text
               | Err T.Text -- expand to wrap err enum
               | Msg T.Text
+              | List [ServiceTypes alg]
+              | Nil
               deriving (Show, Eq, Generic)
 
 instance FromJSON (ServiceTypes alg)
@@ -159,6 +161,7 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("lsvm",  const (return lsvm))
                    , ("lslnk", const (return lslnk))
                    , ("alias", apply2' alias)
+                   , ("vmkeys", const (return vmkeys))
                    , ("link", apply2' linkAbbr) ]
 
 alias :: ST -> ST -> NoteS String ST
@@ -237,6 +240,12 @@ abbr st = do
     put (Note lnk vm abbr' sm)
     return (Abbr abr)
 
+vmkeys :: NoteS String ST
+vmkeys = do
+    note <- get
+    let x = appVM M.keys $ getVMap note
+    put note
+    return . List $ map (Key' . toAesonKey) x
 
 
 -- Encoding

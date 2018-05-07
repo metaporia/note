@@ -41,6 +41,7 @@ dependencies:
 - base64-bytestring
 - unix
 - either
+- haskeline
 library:
   source-dirs: 
       - src
