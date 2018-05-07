@@ -116,7 +116,19 @@ data ServiceTypes alg = Blob' T.Text
               | Msg T.Text
               | List [ServiceTypes alg]
               | Nil
-              deriving (Show, Eq, Generic)
+              deriving (Eq, Generic)
+
+instance (HashAlg alg, Show alg) => Show (ServiceTypes alg) where
+    show Nil = "Nil"
+    show (List xs) = "List " ++ (show xs)
+    show (Msg t) = "Msg " ++ (T.unpack t)
+    show (Ls t) = "Ls " ++ (T.unpack t)
+    show (Blob' t) = "Blob' " ++ (T.unpack t)
+    show (Abbr t) = "Abbr " ++ (T.unpack t)
+    show (Err t) = "Err " ++ (T.unpack t)
+    show (Span' ak sel) = "Span' " ++ (show ak) ++ show (sel)
+    show (Key' (AesonKey ak)) = show ak
+                       
 
 instance FromJSON (ServiceTypes alg)
 instance ToJSON (ServiceTypes alg) where

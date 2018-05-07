@@ -21,6 +21,8 @@ import UI.Service hiding (Result)
 import Control.Monad
 import Control.Monad.IO.Class
 
+import System.Process (system)
+
 import System.Console.Haskeline
 import Data.Maybe
 import Data.List
@@ -191,7 +193,7 @@ resultToMaybe (Failure _) = Nothing
 
 repl :: IO ()
 repl = runInputT (Settings { complete = completeWord Nothing " \t" wordCompleter 
-                           , historyFile = Nothing
+                           , historyFile = Just "repl.history"
                            , autoAddHistory = True
                            }) loop
 
@@ -206,12 +208,13 @@ repl = runInputT (Settings { complete = completeWord Nothing " \t" wordCompleter
                                case parse pCmd input of
                                  Success cmd -> liftIO $ do x <- oas' cmd
                                                             case x of
-                                                              Just x' -> print x'
+                                                              Just x' -> putStrLn (show x')
                                                               Nothing -> print "Nothing"
-                                 _ -> liftIO $ putStrLn input
+                                 _ -> if ":!" `isPrefixOf` input
+                                         then liftIO $ system (drop 2 input) >> return ()
+                                         else liftIO $ putStrLn input
 
                                loop
-
 
 cmds = [ "deref"
        , "derefK"

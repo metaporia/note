@@ -42,6 +42,7 @@ dependencies:
 - unix
 - either
 - haskeline
+- process
 library:
   source-dirs: 
       - src
