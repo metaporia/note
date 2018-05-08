@@ -57,15 +57,17 @@ library:
       - Helpers
       - UI.Vi
       - UI.Service
+      - UI.Types
+      - UI.REPL
       - Note
       - Abbrev
       - Parse
   other-modules:
 
 executables:
-  note-exe:
+  note-serve:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         app/serve
     ghc-options:
     - -threaded
     - -rtsopts
@@ -78,6 +80,13 @@ executables:
     dependencies:
         - note
         - aeson
+  note-repl :
+    main:                Main.hs
+    source-dirs:         app/repl
+    dependencies:
+        - note
+        - aeson
+
 
 tests:
   note-test:

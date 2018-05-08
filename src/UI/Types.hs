@@ -30,8 +30,9 @@ import Data.Functor.Identity
 import Data.Maybe (catMaybes, fromJust, isJust)
 import Data.Tuple (swap)
 
-import Data.Aeson ( ToJSON(..), FromJSON(..), Value(..), encode, decode, genericToEncoding
-                  , toEncoding, defaultOptions, object, (.=))
+import Data.Aeson ( ToJSON(..), FromJSON(..), Value(..), encode
+                  , decode, genericToEncoding , toEncoding
+                  , defaultOptions, object, (.=))
 
 import Data.ByteArray (convert, ByteArrayAccess)
 import qualified Data.ByteArray as BA
@@ -62,7 +63,7 @@ import qualified VMap as VM
 import VMap
 import qualified Abbrev
 import Abbrev hiding (alias)
-import Helpers (Key, eitherToMaybe, maybeToEither, convertException, fromRight)
+import Helpers 
 import Val
 import Select
 import UI.Vi
@@ -72,7 +73,8 @@ type Note' = Note SHA1 T.Text
 type ST = ServiceTypes SHA1
 -- transformer ordering case one
 newtype NoteS err a = NoteS { getNoteS :: StateT Note' (EitherT err IO) a }
-    deriving (Functor, Applicative, Monad, MonadIO, MonadState (Note SHA1 T.Text), MonadError err)
+    deriving ( Functor, Applicative, Monad, MonadIO, MonadError err
+             , MonadState (Note SHA1 T.Text))
 
 emptyNoteS :: NoteS err ()
 emptyNoteS = put newNote 
@@ -130,7 +132,7 @@ data ServiceTypes alg = Blob' T.Text
 
 instance (HashAlg alg, Show alg) => Show (ServiceTypes alg) where
     show Nil = "Nil"
-    show (List xs) = "List " ++ (show xs)
+    show (List xs) = "List " ++ (show (map show xs))
     show (Msg t) = "Msg " ++ (T.unpack t)
     show (Ls t) = "Ls " ++ (T.unpack t)
     show (Blob' t) = "Blob' " ++ (T.unpack t)
@@ -162,7 +164,8 @@ getBlob :: ServiceTypes alg -> Either String T.Text
 getBlob (Blob' t) = Right t 
 getBlob _ = Left "Expected Blob', but found other variant."
 
-getSpan :: HashAlg alg => ServiceTypes alg -> Either String (Key alg, Selection)
+getSpan :: HashAlg alg => ServiceTypes alg 
+        -> Either String (Key alg, Selection)
 getSpan (Span' ak sel) = fromAesonKey ak >>= \k-> return (k, sel)
 getSpan _ = Left "Expected Span', found other variant."
 
@@ -208,6 +211,11 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("link", apply2' link) 
                    , ("selectK", apply' selectK)
                    , ("select", apply2' select)]
+-- TODO:
+-- □  automatically call 'abbr' on new 'Keys'
+-- □  select <abbr> <posn> <posn>
+-- □  'help <cmd>' | 'help' 
+-- □  expose remote api as cli
 
 alias :: ST -> ST -> NoteS String ST
 alias st st' = do
@@ -232,16 +240,14 @@ link st st' = do
     n@(Note lnk vm abbr sm) <- get
     s <- liftEither $ getAbbr st
     o <- liftEither $ getAbbr st'
-
-    let lengthen' k = liftEither $ case lengthen abbr s of 
-                                     Just k -> Right k 
-                                     Nothing -> Left "no key matching abbr found"
-        toKey t = liftEither $ case textToKey t of
-                    Just k -> Right k
-                    Nothing -> Left "could not convert text to 'Key'"
-
+    let lengthen' a = liftEither $ 
+            case lengthen abbr a of 
+              Just k -> Right k 
+              Nothing -> Left "no key matching abbr found"
     st <- lengthen' s
     ot <- lengthen' o
+    liftIO $ print s >> print "\n" >> print o
+    liftIO $ print st >> print "\n" >> print ot
                 
 
     let lnkr' = Link.insert (Subj st) (Obj ot) lnk
@@ -267,7 +273,8 @@ derefAbbr st = do
 loadf :: ST -> NoteS String ST
 loadf st = do
     fp <- liftEither . fmap T.unpack $ getBlob st
-    eCont <- liftIO $ (try (TIO.readFile fp) :: IO (Either SomeException T.Text))
+    eCont <- liftIO $ 
+        (try (TIO.readFile fp) :: IO (Either SomeException T.Text))
     contents <- liftEither $ convertException eCont
     n@(Note lnk vm abbr sm) <- get
     let (vm', mK) = insertRawBlob contents vm
@@ -291,6 +298,14 @@ lslnk = do
     let s = pshow $ getLinks note
     put note
     return . Ls $ T.pack s
+
+lsabbr :: NoteS String ST
+lsabbr = do
+    note <- get
+    let s = show $ getAbbrev note
+    put note
+    return . Ls $ T.pack s
+
 
 runCmd :: Cmd -> Either String (NoteS String ST)
 runCmd (Cmd cmd args) = 
@@ -355,7 +370,9 @@ linksfrom st = do
           Nothing -> Left "could not find key matching abbr"
     let objs =  linksFrom (getLinks note) subj
     put note
-    return . List $ map (\(Obj k) -> Abbr . take' 8 $ keyToText k) objs
+    return . List $ map (\(Obj k) -> Abbr 
+                                   . T.pack 
+                                   . take 8 $ show k) objs
 
 linksfromK :: ST -> NoteS String ST
 linksfromK st = do
@@ -401,31 +418,7 @@ select st st' = do
     put (Note lnk vm' abbr sm')
     return (Key' $ toAesonKey spanKey)
     
-            
-        
-            
-        
-
-
-
-
-        
-
-
-
-
-
-
-
-
-        
-
-
-
-
 -- Encoding
-
-
 newtype Result a = Result a deriving (Eq, Generic, Show)
 
 instance ToJSON a => ToJSON (Result a) where
@@ -437,7 +430,8 @@ instance FromJSON a => FromJSON (Result a)
 --instance ToJSON JSONByteString where
 --    toJSON bs = String $ Base64.encode (getJBS bs)
 
-newtype AesonKey alg = AesonKey { getAesonKey :: T.Text } deriving (Eq, Generic)
+newtype AesonKey alg = AesonKey { getAesonKey :: T.Text } 
+    deriving (Eq, Generic)
 
 instance (HashAlg alg, Show alg) => Show (AesonKey alg) where
     show ak = case fromAesonKey ak of
@@ -460,10 +454,15 @@ keyToText :: Key alg -> T.Text
 keyToText = decodeUtf8 . Base64.encode . keyToByteString
 
 textToKey :: HashAlg alg => T.Text -> Maybe (Key alg)
-textToKey =  join . fmap byteStringToKey . eitherToMaybe . Base64.decode . encodeUtf8
+textToKey =  join 
+           . fmap byteStringToKey 
+           . eitherToMaybe 
+           . Base64.decode 
+           . encodeUtf8
 
 textToKey' :: HashAlg alg => T.Text -> Either String (Key alg)
-textToKey' t =  (Base64.decode . encodeUtf8) t >>= maybeToEither . byteStringToKey  
+textToKey' t =  (Base64.decode . encodeUtf8) t >>= maybeToEither 
+                                                 . byteStringToKey  
 
 ak = toAesonKey k0
 

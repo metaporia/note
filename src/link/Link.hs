@@ -80,9 +80,9 @@ class Linker (linker :: * -> *) alg where
     {-# MINIMAL linksTo, linksFrom, insertTo, insertFrom #-}
     type Subject alg
     type Object alg 
-    -- | Lookup 'Object's that link to the given 'Subject'.
-    linksTo :: linker alg -> Object alg -> [Subject alg]
     -- | Lookup 'Subject's that link to the given 'Object'.
+    linksTo :: linker alg -> Object alg -> [Subject alg]
+    -- | Lookup 'Object's that link to the given 'Subject'.
     linksFrom :: linker alg -> Subject alg -> [Object alg]
     -- | Insert link /from/ 'Subject' to 'Object'.
     insertFrom :: linker alg 
@@ -128,19 +128,22 @@ instance Linker Links alg where
           Nothing -> []
 
     insertTo (Links to from) obj subj  =
-        let to' = insertLink to from subj obj
+        let to' = insertLink to subj obj
                  in (Links to' from)
 
     insertFrom (Links to from) subj obj =
-        let from' = insertLink from to obj subj 
+        let from' = insertLink from obj subj 
          in (Links to from')
 
 -- | Helper to shorten implementations of 'insertLinkTo' and 'insertLinkFrom'.
--- Inserts @a -> [b]@ and @b -> [a]@.
-insertLink :: Ord a => M.Map a [b] -> M.Map b [a] -> a -> b -> M.Map a [b]
-insertLink as bs a b =
+-- Inserts @a -> [b]@ and @b -> [a]@. If @b@ is already associated with @a@,
+-- then 'insertLink' does nothing.
+insertLink :: (Eq b, Ord a) => M.Map a [b] -> a -> b -> M.Map a [b]
+insertLink as a b =
     case M.lookup a as of
-      Just bs' ->  M.insert a (b:bs') as
+      Just bs' ->  case elem b bs' of 
+                     False -> M.insert a (b:bs') as
+                     True -> as
       Nothing -> M.insert a [b] as
 
 
