@@ -58,7 +58,7 @@ data Note alg c =
          } deriving (Eq, Show)
 
 newNote :: Note alg c
-newNote = Note Link.empty VM.empty (newAbbrevStore 7) newSelVMap
+newNote = Note Link.empty VM.empty (newAbbrevStore 8) newSelVMap
 
 loadNS :: forall alg c. (VMVal c, HashAlg alg)
        => c

@@ -84,11 +84,18 @@ pCmd = let ps = map try [ parseAlias
 
 parseLinksFromK :: Parser Cmd
 parseLinksFromK = Cmd <$> cmd "linksfromK" <* skip (char ' ')
-                     <*> fmap (return . Key' . AesonKey . T.pack) (some (noneOf "\n "))
+                     <*> fmap return parseKey
 
 parseLinksToK :: Parser Cmd
 parseLinksToK = Cmd <$> cmd "linkstoK" <* skip (char ' ')
-                     <*> fmap (return . Key' . AesonKey . T.pack) (some (noneOf "\n "))
+                     <*> fmap return parseKey
+
+parseKey :: Parser ST
+parseKey = f <$> some (noneOf "\n ") 
+    where f s = case hexStrToKey s of
+                  Just k -> Key' $ toAesonKey k
+                  Nothing -> Err "could not convert text to key"
+
 
 
 parseLinksFrom :: Parser Cmd
@@ -121,7 +128,7 @@ parseDeref = Cmd <$> (fmap T.pack $ (string "deref" <* skip (char ' ')))
 
 parseDerefK :: Parser Cmd
 parseDerefK = Cmd <$> (fmap T.pack $ (string "derefK" <* skip (char ' '))) 
-                  <*> (fmap (return . Key' . AesonKey . T.pack) (some (noneOf "\n ")))
+                  <*> fmap return parseKey
                                          -- ^ 'toAesonKey' or 'AesonKey'
                                          -- likely the latter  ^^^
 
@@ -134,7 +141,7 @@ parseAbbr :: Parser Cmd
 parseAbbr = Cmd <$> cmd "abbr" <* skip (char ' ')
                 <*> (fmap (return . Key' . AesonKey . T.pack) 
                           (some (noneOf "\n ")))
-            
+
 parseLslnk :: Parser Cmd
 parseLslnk = Cmd <$> cmd "lslnk"
                 <*> fmap (return . Err . T.pack. ("unused arg: "++)) (many (noneOf "\n "))
@@ -157,12 +164,8 @@ cmd w = fmap T.pack (string w)
 
 
 
-
-
-
-
 {-
-parseCmd :: Parser Cmd
+    parseCmd :: Parser Cmd
 parseCmd = 
     Cmd <$> fmap T.pack parseCmd' 
         <*> (fmap .fmap) T.pack (many parseArgNoneBut)
@@ -188,7 +191,7 @@ parseCusCmd cmdStr nargs =
 main :: IO ()
 main = serve
 {-
-c = try (parseCusCmd "command" 2) <?> "command <arg> <arg>\\n" 
+    c = try (parseCusCmd "command" 2) <?> "command <arg> <arg>\\n" 
 d = try (parseCusCmd "eal" 3) <?> "eal <arg> <arg> <arg>\\n"
 
 t = c <|> d
@@ -210,42 +213,24 @@ cmds = M.empty :: M.Map String Command
 
 cmd = Cmd "load" ["key0", "key1"]
 -}
-replEcho :: IO ()
-replEcho  = do
-    let loop = do putStr "> "
-                  l <- getLine
-                  case l of
-                    "exit" -> return () 
-                    _ -> case parse pCmd l of 
-                           Success cmd -> do print cmd
-                                             x <- oas cmd
-                                             case x of
-                                               Just x' -> print x'
-                                               Nothing -> print "Nothing"
-                                             loop
-                           _ -> putStrLn l *> loop 
-    loop
-    
-repl' = replEcho
-
 parse :: Parser a -> String -> Result a
 parse p s = parseString p mempty s
 
 {-
-resultToMaybe :: Result a -> Maybe a
+    resultToMaybe :: Result a -> Maybe a
 resultToMaybe (Success v) = Just v
 resultToMaybe (Failure _) = Nothing
 -}
 
 repl :: IO ()
 repl = runInputT (Settings { complete = completeWord Nothing " \t" wordCompleter 
-                           , historyFile = Just "repl.history"
-                           , autoAddHistory = True
+  , historyFile = Just "repl.history"
+  , autoAddHistory = True
                            }) loop
 
-    where 
-        loop :: InputT IO ()
-        loop = do
+   where 
+       loop :: InputT IO ()
+       loop = do
             minput <- getInputLine "> "
             case minput of 
               Nothing -> return ()
@@ -263,19 +248,19 @@ repl = runInputT (Settings { complete = completeWord Nothing " \t" wordCompleter
                                loop
 
 cmds = [ "deref"
-       , "derefK"
-       , "alias"
-       , "abbr"
-       , "loadf"
-       , "link"
-       , "lslnk"
-       , "lsvm"
-       , "linksto"
-       , "linkstoK"
-       , "linksfrom"
-       , "linksfromK"
-       , "vmkeys"
-       , "abbrkeys"
+  , "derefK"
+  , "alias"
+  , "abbr"
+  , "loadf"
+  , "link"
+  , "lslnk"
+  , "lsvm"
+  , "linksto"
+  , "linkstoK"
+  , "linksfrom"
+  , "linksfromK"
+  , "vmkeys"
+  , "abbrkeys"
        ]
 
 wordCompleter :: String -> IO [Completion]
@@ -283,7 +268,7 @@ wordCompleter s = do
     vm <- getVMKeys
     abbr <- getAbbrevKeys
     let matches = filter (isPrefixOf s) (cmds ++ vm ++ abbr)
-    
+
     return $ map simpleCompletion matches
 
 

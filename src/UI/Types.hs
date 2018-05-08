@@ -20,7 +20,7 @@ import Data.String (IsString)
 import Data.String.ToString (toString)
 
 import qualified Data.ByteString.Lazy as L
-import qualified Data.ByteString.Lazy.Char8 as LIO
+import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.ByteString as B
 import Data.ByteString.Conversion hiding (List)
 
@@ -34,8 +34,12 @@ import Data.Aeson ( ToJSON(..), FromJSON(..), Value(..), encode, decode, generic
                   , toEncoding, defaultOptions, object, (.=))
 
 import Data.ByteArray (convert, ByteArrayAccess)
+import qualified Data.ByteArray as BA
 
 import qualified Data.Binary as BIN
+import Data.Bits
+
+import qualified Data.ByteString.Base64 as Base64
 
 import Control.Monad.Trans.Either
 import Control.Monad.Trans.State (StateT, runStateT)
@@ -48,13 +52,17 @@ import Control.Exception
 import Data.Monoid ((<>))
 
 import GHC.Generics
+import Text.Printf
+import Data.Char (digitToInt)
+import Data.List.Split (chunksOf)
+import Numeric (showHex)
 
 import Link
 import qualified VMap as VM
 import VMap
 import qualified Abbrev
 import Abbrev hiding (alias)
-import Helpers (Key, eitherToMaybe, maybeToEither, convertException)
+import Helpers (Key, eitherToMaybe, maybeToEither, convertException, fromRight)
 import Val
 import Select
 import UI.Vi
@@ -125,11 +133,19 @@ instance (HashAlg alg, Show alg) => Show (ServiceTypes alg) where
     show (Msg t) = "Msg " ++ (T.unpack t)
     show (Ls t) = "Ls " ++ (T.unpack t)
     show (Blob' t) = "Blob' " ++ (T.unpack t)
-    show (Abbr t) = "Abbr " ++ (T.unpack t)
+    show (Abbr t) = case b64toHex t of
+                      Right t -> "Abbr " ++ (take 7 t)
+                      Left err -> "Abbr err: "++err
     show (Err t) = "Err " ++ (T.unpack t)
     show (Span' ak sel) = "Span' " ++ (show ak) ++ show (sel)
-    show (Key' (AesonKey ak)) = show ak
+    show (Key' ak) = show ak
                        
+-- | show abbr in hex
+b64toHex :: T.Text -> Either String String
+b64toHex = fmap hex . Base64.decode . toByteString' 
+
+hex :: B.ByteString -> String
+hex = foldr showHex "" . B.unpack
 
 instance FromJSON (ServiceTypes alg)
 instance ToJSON (ServiceTypes alg) where
@@ -306,7 +322,7 @@ linksto st = do
           Nothing -> Left "could not find key matching abbr"
     let subjs =  linksTo (getLinks note) obj
     put note
-    return . List $ map (\(Subj k) -> Abbr . take' 7 $ keyToText k) subjs
+    return . List $ map (\(Subj k) -> Abbr . take' 8 $ keyToText k) subjs
 
 -- keys
 linkstoK :: ST -> NoteS String ST
@@ -329,7 +345,7 @@ linksfrom st = do
           Nothing -> Left "could not find key matching abbr"
     let objs =  linksFrom (getLinks note) subj
     put note
-    return . List $ map (\(Obj k) -> Abbr . take' 7 $ keyToText k) objs
+    return . List $ map (\(Obj k) -> Abbr . take' 8 $ keyToText k) objs
 
 linksfromK :: ST -> NoteS String ST
 linksfromK st = do
@@ -376,7 +392,12 @@ instance FromJSON a => FromJSON (Result a)
 --instance ToJSON JSONByteString where
 --    toJSON bs = String $ Base64.encode (getJBS bs)
 
-newtype AesonKey alg = AesonKey { getAesonKey :: T.Text } deriving (Eq, Show, Generic)
+newtype AesonKey alg = AesonKey { getAesonKey :: T.Text } deriving (Eq, Generic)
+
+instance (HashAlg alg, Show alg) => Show (AesonKey alg) where
+    show ak = case fromAesonKey ak of
+                Right k -> show k
+                Left _ -> "invalid key"
 
 
 instance ToJSON (AesonKey alg) where
@@ -407,6 +428,8 @@ toAesonKey = AesonKey . keyToText
 fromAesonKey :: HashAlg alg => AesonKey alg -> Either String (Key alg)
 fromAesonKey = textToKey' . getAesonKey
 
+-- how do we convert @show (k :: Key SHA1)@ back to a Key?
+
 data Cmd = Cmd T.Text [ServiceTypes SHA1] deriving (Eq, Generic, Show)
 
 getCmd :: Cmd -> T.Text
@@ -427,4 +450,29 @@ instance ToJSON Cmd where
 
 instance FromJSON Cmd
 
+hexStrToKey :: HashAlg alg => String -> Maybe (Key alg)
+hexStrToKey s = conv s >>= digestFromByteString . B.pack
 
+
+
+-- hex string to [Word8]
+conv :: String -> Maybe [BIN.Word8]
+conv = sequence . map (fmap (uncurry g) . getTwo) . chunksOf 2
+
+-- where a and b are hex digits
+g a b = let wa = shiftL (fromIntegral (digitToInt a) :: BIN.Word8) 4
+            wb = fromIntegral (digitToInt b) :: BIN.Word8
+         in wa .|. wb
+
+getTwo :: [a] -> Maybe (a, a)
+getTwo xs 
+  | (length $ (take 2) xs) == 2 = Just (xs !! 0, xs !! 1)
+  | otherwise = Nothing
+
+k = fromRight (fromAesonKey ak)
+
+s = show k
+bs' = keyToByteString k 
+
+pbits :: PrintfType r => r
+pbits =  printf "%b\n"
