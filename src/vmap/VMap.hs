@@ -185,12 +185,11 @@ newSelVMap = SelVMap M.empty
 -- Returns 'Nothing' if passed a 'Blob' variant of 'Val'. This partiality may
 -- be removed by injectiing newtypes into 'Val' variants so we can match on
 -- variants and write "total" partial functions--ha!
-registerSpanInsertion :: Key alg -> Val alg c->  SelVMap alg -> Maybe (SelVMap alg)
-registerSpanInsertion spanKey (Span sourceKey s) (SelVMap m) = 
+registerSpanInsertion :: Key alg -> Key alg -> Selection ->  SelVMap alg -> SelVMap alg
+registerSpanInsertion spanKey sourceKey s (SelVMap m) = 
     case M.lookup sourceKey m of
-      Just xs -> Just . SelVMap $  M.insert sourceKey (spanKey:xs) m
-      Nothing -> Just . SelVMap $ M.insert sourceKey [spanKey] m
-registerSpanInsertion spanKey (Blob _ _) m = Nothing
+      Just xs -> SelVMap $  M.insert sourceKey (spanKey:xs) m
+      Nothing -> SelVMap $ M.insert sourceKey [spanKey] m
 
 
 

@@ -120,6 +120,7 @@ data ServiceTypes alg = Blob' T.Text
               | Span' (AesonKey alg) Selection
               | Key' (AesonKey alg)
               | Abbr T.Text
+              | Sel' T.Text T.Text
               | Ls T.Text
               | Err T.Text -- expand to wrap err enum
               | Msg T.Text
@@ -133,12 +134,14 @@ instance (HashAlg alg, Show alg) => Show (ServiceTypes alg) where
     show (Msg t) = "Msg " ++ (T.unpack t)
     show (Ls t) = "Ls " ++ (T.unpack t)
     show (Blob' t) = "Blob' " ++ (T.unpack t)
-    show (Abbr t) = case b64toHex t of
-                      Right t -> "Abbr " ++ (take 7 t)
-                      Left err -> "Abbr err: "++err
+    show (Abbr t) = "Abbr " ++ (T.unpack t)
+               -- case b64toHex t of
+               --       Right t -> "Abbr " ++ (take 7 t)
+               --       Left err -> "Abbr err: "++err
     show (Err t) = "Err " ++ (T.unpack t)
     show (Span' ak sel) = "Span' " ++ (show ak) ++ show (sel)
     show (Key' ak) = show ak
+    show (Sel' s e) = "Sel' " ++ (T.unpack s) ++ (' ':(T.unpack e))
                        
 -- | show abbr in hex
 b64toHex :: T.Text -> Either String String
@@ -179,6 +182,11 @@ getMsg :: HashAlg alg => ServiceTypes alg -> Either String T.Text
 getMsg (Msg e) = Right e
 getMsg _ = Left "Expected Msg, but found other variant."
 
+getSel' :: HashAlg alg => ServiceTypes alg -> Either String Selection
+getSel' (Sel' s e ) = Right (Sel (toInt s)  (toInt e))
+    where toInt s = read (T.unpack s) :: Int
+getSel'  _ =  Left "Expected Sel', but found other variant."
+
 
 -- Remote API
 ecmds :: (Ord k, IsString k) 
@@ -197,7 +205,9 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("linksfrom", apply' linksfrom)
                    , ("linksfromK", apply' linksfromK)
                    , ("linkK", apply2' linkK) 
-                   , ("link", apply2' link) ]
+                   , ("link", apply2' link) 
+                   , ("selectK", apply' selectK)
+                   , ("select", apply2' select)]
 
 alias :: ST -> ST -> NoteS String ST
 alias st st' = do
@@ -356,6 +366,41 @@ linksfromK st = do
     put note
     return . List $ map (\(Obj k) -> Key' . toAesonKey $ k) objs
 
+-- | Adds 'Span'' to VMap, SelMap
+selectK :: ST -> NoteS String ST
+selectK st = do
+    (sourceKey, sel) <- liftEither $ getSpan st
+    (Note lnk vm abbr sm) <- get
+    (vm', spanKey) <- liftEither $ 
+        case insertRawSpan sourceKey sel vm of
+          Just (vm', spanKey) -> Right (vm', spanKey) 
+          Nothing -> Left "unable to deref span's target key"
+    let sm' = registerSpanInsertion spanKey sourceKey sel sm
+    put (Note lnk vm' abbr sm')
+
+    return (Key' $ toAesonKey spanKey)
+-- 1.  insertRawSpan k s
+-- 2. registerSpanInsertion  spankey (Span k s)
+-- 3. return (key' spankey)
+
+-- | 'selectK' for 'Abbr'
+select :: ST -> ST -> NoteS String ST
+select st st' = do
+    (Note lnk vm abbr sm) <- get
+    a <- liftEither $ getAbbr st
+    sel <- liftEither $ getSel' st'
+    sourceKey <- liftEither $
+        case lengthen abbr a of
+          Just k -> Right k
+          Nothing -> Left "could not lengthen key"
+    (vm', spanKey) <- liftEither $ 
+        case insertRawSpan sourceKey sel vm of
+          Just (vm', spanKey) -> Right (vm', spanKey) 
+          Nothing -> Left "unable to deref span's target key"
+    let sm' = registerSpanInsertion spanKey sourceKey sel sm
+    put (Note lnk vm' abbr sm')
+    return (Key' $ toAesonKey spanKey)
+    
             
         
             
@@ -469,10 +514,6 @@ getTwo xs
   | (length $ (take 2) xs) == 2 = Just (xs !! 0, xs !! 1)
   | otherwise = Nothing
 
-k = fromRight (fromAesonKey ak)
-
-s = show k
-bs' = keyToByteString k 
 
 pbits :: PrintfType r => r
 pbits =  printf "%b\n"

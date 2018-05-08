@@ -175,10 +175,8 @@ insertSpan :: (HashAlg alg, VMVal c)
 insertSpan (k, s) = state $ \note@(Note lnk vm abbr sm) -> 
     case insertRawSpan k s vm of
       Just (vm', k') -> 
-          let span = mkSpan k s
-           in case registerSpanInsertion k' span sm of
-                Just sm' -> (Just k', Note lnk vm' abbr sm')
-                Nothing -> (Nothing, note)
+          let sm' =  registerSpanInsertion k' k s sm 
+           in (Just k', Note lnk vm' abbr sm') 
       Nothing -> (Nothing, note)
 
 

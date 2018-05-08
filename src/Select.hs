@@ -57,29 +57,29 @@ instance ToJSON Selection where
 
 instance FromJSON Selection
 
-data Selection' = Sel' { sIdx' :: Idx, eIdx' :: Idx } deriving (Eq, Show)
+--data Selection' = Sel' { sIdx' :: Idx, eIdx' :: Idx } deriving (Eq, Show)
 
 data Idx = Start | Idx Int | End deriving (Eq, Show)
 
-liftSel' :: (Int -> Int) -> Selection' -> Selection'
-liftSel' f (Sel' (Idx s) (Idx e)) = Sel' (Idx $ f s) (Idx $ f e)
-liftSel' f (Sel' Start (Idx e)) = Sel' Start (Idx $ f e)
-liftSel' f (Sel' (Idx s) End) = Sel' (Idx $ f s) End
-
-updateSel' :: Int -> Selection' -> Selection'
-updateSel' idx = liftSel' ((-)idx) 
-
-sel'' :: String -> Selection' -> (String, String, String)
-sel'' s (Sel' Start End) = ("", s, "")
-sel'' s (Sel' Start (Idx e)) = ("", sel, post)
-    where (sel, post) = splitAt e s
-sel'' s (Sel' (Idx idx) End) = (pre, sel, "")
-    where (pre, sel) = splitAt idx s
-sel'' s' (Sel' (Idx s) (Idx e)) = (pre, sel, post)
-    where (pre, rest) = splitAt s b
-          (sel, post) = splitAt selLen rest
-          selLen = e - s
-
+--liftSel' :: (Int -> Int) -> Selection' -> Selection'
+--liftSel' f (Sel' (Idx s) (Idx e)) = Sel' (Idx $ f s) (Idx $ f e)
+--liftSel' f (Sel' Start (Idx e)) = Sel' Start (Idx $ f e)
+--liftSel' f (Sel' (Idx s) End) = Sel' (Idx $ f s) End
+--
+--updateSel' :: Int -> Selection' -> Selection'
+--updateSel' idx = liftSel' ((-)idx) 
+--
+--sel'' :: String -> Selection' -> (String, String, String)
+--sel'' s (Sel' Start End) = ("", s, "")
+--sel'' s (Sel' Start (Idx e)) = ("", sel, post)
+--    where (sel, post) = splitAt e s
+--sel'' s (Sel' (Idx idx) End) = (pre, sel, "")
+--    where (pre, sel) = splitAt idx s
+--sel'' s' (Sel' (Idx s) (Idx e)) = (pre, sel, post)
+--    where (pre, rest) = splitAt s b
+--          (sel, post) = splitAt selLen rest
+--          selLen = e - s
+--
 sel' :: Splittable a 
       => a -> Selection -> (a, a, a)
 sel' b (Sel s e) = (pre, sel, post)

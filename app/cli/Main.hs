@@ -27,6 +27,11 @@ import System.Console.Haskeline
 import Data.Maybe
 import Data.List
 import Data.Either (rights)
+import Data.Char (digitToInt)
+
+import Crypto.Hash
+
+import Select (Selection(..))
 
 
 parseCmd' :: Parser String
@@ -79,8 +84,36 @@ pCmd = let ps = map try [ parseAlias
                         , parseLinksTo
                         , parseLinksFromK
                         , parseLinksToK
+                        , parseSelectK
+                        , parseSelect
                         ]
         in choice ps <* skipMany (oneOf "\n ")
+
+parseSelectK :: Parser Cmd
+parseSelectK = Cmd <$> cmd "selectK" <* skip (char ' ')
+                   <*> fmap return parseSpan 
+
+parseSelect :: Parser Cmd
+parseSelect = Cmd <$> cmd "select" <* skip (char ' ')
+                 <*> (cons <$> ((Abbr . T.pack) <$> some (noneOf "\n ") <* skip (char ' '))
+                           <*> fmap return parseSel)
+
+parseSpan :: Parser ST
+parseSpan = Span' <$> parseAesonKey <*> parseSelection
+
+parseAesonKey :: Parser (AesonKey SHA1)
+parseAesonKey = do x <- parseKey
+                   case x of 
+                     Key' ak -> return ak
+                     _ -> unexpected "hex to key conversion failed"
+
+parseSel :: Parser ST
+parseSel = Sel' <$> (T.pack <$> some digit <* skip (char ' '))
+                <*> (T.pack <$> some digit)
+
+parseSelection :: Parser Selection
+parseSelection = Sel <$> (read <$> some digit) <* skip (char ' ')
+                     <*> (read <$> some digit)
 
 parseLinksFromK :: Parser Cmd
 parseLinksFromK = Cmd <$> cmd "linksfromK" <* skip (char ' ')
@@ -95,7 +128,6 @@ parseKey = f <$> some (noneOf "\n ")
     where f s = case hexStrToKey s of
                   Just k -> Key' $ toAesonKey k
                   Nothing -> Err "could not convert text to key"
-
 
 
 parseLinksFrom :: Parser Cmd
@@ -139,8 +171,7 @@ parseLoadf = Cmd <$> (fmap T.pack $ (string "loadf" <* skip (char ' ')))
 
 parseAbbr :: Parser Cmd
 parseAbbr = Cmd <$> cmd "abbr" <* skip (char ' ')
-                <*> (fmap (return . Key' . AesonKey . T.pack) 
-                          (some (noneOf "\n ")))
+                <*> fmap return parseKey
 
 parseLslnk :: Parser Cmd
 parseLslnk = Cmd <$> cmd "lslnk"
@@ -248,20 +279,20 @@ repl = runInputT (Settings { complete = completeWord Nothing " \t" wordCompleter
                                loop
 
 cmds = [ "deref"
-  , "derefK"
-  , "alias"
-  , "abbr"
-  , "loadf"
-  , "link"
-  , "lslnk"
-  , "lsvm"
-  , "linksto"
-  , "linkstoK"
-  , "linksfrom"
-  , "linksfromK"
-  , "vmkeys"
-  , "abbrkeys"
-       ]
+       , "derefK"
+       , "alias"
+       , "abbr"
+       , "loadf"
+       , "link"
+       , "lslnk"
+       , "lsvm"
+       , "linksto"
+       , "linkstoK"
+       , "linksfrom"
+       , "linksfromK"
+       , "vmkeys"
+       , "abbrkeys"
+       , "select" ]
 
 wordCompleter :: String -> IO [Completion]
 wordCompleter s = do
