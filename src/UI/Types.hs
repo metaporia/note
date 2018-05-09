@@ -152,6 +152,7 @@ b64toHex = fmap hex . Base64.decode . toByteString'
 hex :: B.ByteString -> String
 hex = foldr showHex "" . B.unpack
 
+
 instance FromJSON (ServiceTypes alg)
 instance ToJSON (ServiceTypes alg) where
     toEncoding = genericToEncoding defaultOptions
@@ -516,3 +517,5 @@ getTwo xs
 
 pbits :: PrintfType r => r
 pbits =  printf "%b\n"
+
+main = do BLC.

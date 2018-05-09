@@ -62,7 +62,7 @@ library:
       - Note
       - Abbrev
       - Parse
-  other-modules:
+  other-modules: []
 
 executables:
   note-serve:
