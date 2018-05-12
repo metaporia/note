@@ -30,7 +30,7 @@ import Data.Char (digitToInt)
 import Crypto.Hash
 
 import Select (Selection(..))
-
+import UI.Types hiding (Result)
 
 parseCmd' :: Parser String
 parseCmd'  = pad' (some letter) 
@@ -159,7 +159,7 @@ parseDeref = Cmd <$> (fmap T.pack $ (string "deref" <* skip (char ' ')))
 parseDerefK :: Parser Cmd
 parseDerefK = Cmd <$> (fmap T.pack $ (string "derefK" <* skip (char ' '))) 
                   <*> fmap return parseKey
-                                         -- ^ 'toAesonKey' or 'AesonKey'
+                                         -- 'toAesonKey' or 'AesonKey'
                                          -- likely the latter  ^^^
 
 parseLoadf :: Parser Cmd

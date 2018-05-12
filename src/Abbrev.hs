@@ -1,6 +1,8 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Abbrev where
+
 
 
 import qualified Data.Map as M
@@ -14,6 +16,17 @@ import Select (Splittable)
 -- | Maps shortened key to associated full-length digest.
 data ShortKeys alg c = ShortKeys Int (M.Map c (Key alg))
     deriving (Eq, Show)
+
+showShortKeys :: forall alg c. (HashAlg alg, Show c, Show alg) 
+              => ShortKeys alg c -> String
+showShortKeys (ShortKeys _ m) = "abbr:\n" ++ (go $ M.toList m)
+    where go :: [(c, Key alg)] -> String
+          go [] = []
+          go ((c, k):xs) = show c ++ " -> " 
+                        ++ take 8 (show k)
+                        ++ "\n"
+                        ++ go xs
+
 
 newShortKeys n = ShortKeys n M.empty
 

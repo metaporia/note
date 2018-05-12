@@ -65,6 +65,20 @@ library:
   other-modules: []
 
 executables:
+  note-tui:
+    main:               Main.hs
+    source-dirs:        app/tui
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - note
+    - brick
+    - microlens-th
+    - microlens
+    - vty
+
   note-serve:
     main:                Main.hs
     source-dirs:         app/serve
@@ -74,12 +88,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
         - note
-  note-cli:
-    main:                Main.hs
-    source-dirs:         app/cli
-    dependencies:
-        - note
-        - aeson
   note-repl :
     main:                Main.hs
     source-dirs:         app/repl

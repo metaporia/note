@@ -213,10 +213,9 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("selectK", apply' selectK)
                    , ("select", apply2' select)]
 -- TODO:
--- □  automatically call 'abbr' on new 'Keys'
--- □  select <abbr> <posn> <posn>
+-- ▣  select <abbr> <posn> <posn>
 -- □  'help <cmd>' | 'help' 
--- □  expose remote api as cli
+-- expose the below API w/o 'ST', for non-networked use.
 
 alias :: ST -> ST -> NoteS String ST
 alias st st' = do
@@ -517,5 +516,3 @@ getTwo xs
 
 pbits :: PrintfType r => r
 pbits =  printf "%b\n"
-
-main = do BLC.

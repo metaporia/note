@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveGeneric #-}
-module UI.Service (serve, oas, oas', module Types) where
+module UI.Service where
 
 import qualified Network.Socket as Sock
 import Network.Socket.Options
