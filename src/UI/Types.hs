@@ -215,7 +215,7 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
 -- TODO:
 -- ▣  select <abbr> <posn> <posn>
 -- □  'help <cmd>' | 'help' 
--- expose the below API w/o 'ST', for non-networked use.
+-- □  expose the below API w/o 'ST', for non-networked use. (see 
 
 alias :: ST -> ST -> NoteS String ST
 alias st st' = do

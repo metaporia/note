@@ -41,11 +41,14 @@ import Data.Functor (void)
 import Data.Maybe (isJust, fromJust, catMaybes)
 import Data.Monoid ((<>))
 
-import Note (Note(..), newNote, ls, lsvm, lslnk, lssm, lsabbr)
+import Note (Note(..), newNote, ls)
 import qualified Note
-import UI.Types (NoteS, runWith')
-import Abbrev (alias')
-import VMap
+import UI.Types (NoteS, runWith', keyToText)
+import Abbrev 
+import VMap hiding (deref)
+import qualified VMap as VM
+import Link
+import Select
 
 
 
@@ -54,73 +57,112 @@ runWith = runWith'
 run stateToRun state = runWith stateToRun state
 
 go state = run (state *> ls') newNote
-go' state = void $ (run (state *> ls') newNote)
+go_ state = void $ (run (state *> ls') newNote)
 
 
               
 
 ls' :: NoteS String ()
 ls' = do n <- get
-         liftIO $ sequence_ $ [lsvm, lslnk, lssm, lsabbr] <*> [n]
+         liftIO $ sequence_ $ [ Note.lsvm
+                              , Note.lslnk
+                              , Note.lssm
+                              , Note.lsabbr] 
+                              <*> [n]
          put n
          return ()
 
+one = loadf "work" >>= aliasK "work"
 two = loadf "specificity.md"  >>= aliasK "spec"
 
+three = join $ liftM2 linkK (loadf "work") (loadf "specificity.md")
+
+keepValue :: Monad m => m a -> (a -> m b) -> m a
+keepValue ma f = do
+    a <- ma
+    a <$ f a
+
+keepValue' :: Monad m => m a -> (a -> m b) -> m a
+keepValue' ma f = ma >>= \a -> a <$ f a
 
 
 -- Internal API
-aliasK :: T.Text -> Key SHA1 -> NoteS String ()
+
+-- | Binds @alias :: T.Text@ to @key :: Key SHA1@, and returns @alias@.
+aliasK :: T.Text -> Key SHA1 -> NoteS String T.Text
 aliasK alias key = do
     n@(Note lnk vm abbr sm) <- get
     let abbr' = alias' abbr alias key
     put (Note lnk vm abbr' sm)
+    return alias
+
+linkK :: Key SHA1 -> Key SHA1 -> NoteS String ()
+linkK k k' = do
+    n@(Note lnk vm abbr sm) <- get
+    let lnkr' = Link.insert (Subj k) (Obj k') lnk
+    put (Note lnkr' vm abbr sm)
     return ()
-{-
-linkK :: ST -> ST -> NoteS String ST
-linkK st st' = do
+
+-- | Fetch a 'Key''s contents. 
+--
+-- NB: While 'EitherT' encodes the possiblitiy of failure into 'NoteS', this is
+-- unrepresentative of the intended "deref invariant"--that is, 
+--
+--      i) @k0 == hash $ deref k0@, and
+--     ii) @deref k0 == Just v@.
+--
+-- Although the types do not reflect this (for the present), users should
+-- remain cognizant of the more overarching, implicit intent.
+--
+-- tldr; if 'deref' returns a 'Nothing' something is /very/, /very/ wrong.
+--
+derefK :: Key SHA1 -> NoteS String T.Text
+derefK k = do
     n@(Note lnk vm abbr sm) <- get
-    s <- liftEither $ Subj <$> getKey st
-    o <- liftEither $ Obj <$> getKey st'
-    let lnkr' = Link.insert s o lnk
-    put (Note lnkr' vm abbr sm)
-    return $ Msg "link successfuly registered"
-
-link :: ST -> ST -> NoteS String ST
-link st st' = do
-    n@(Note lnk vm abbr sm) <- get
-    s <- liftEither $ getAbbr st
-    o <- liftEither $ getAbbr st'
-    let lengthen' a = liftEither $ 
-            case lengthen abbr a of 
-              Just k -> Right k 
-              Nothing -> Left "no key matching abbr found"
-    st <- lengthen' s
-    ot <- lengthen' o
-    liftIO $ print s >> print "\n" >> print o
-    liftIO $ print st >> print "\n" >> print ot
-                
-
-    let lnkr' = Link.insert (Subj st) (Obj ot) lnk
-    put (Note lnkr' vm abbr sm)
-    return . Msg $ s <> " successfuly linked to " <> o
-
-
-
-derefAbbr :: ST -> NoteS String ST
-derefAbbr st = do
-    n@(Note lnk vm abbr sm) <- get
-    alias' <- liftEither $ getAbbr st
-    k <- liftEither $ case lengthen abbr alias' of
-                       Just k -> Right k
-                       Nothing -> Left "abbr not found in Abbrev"
     val <- liftEither $ 
-        case deref vm k of
+        case VM.deref vm k of
           Just b -> Right b 
           Nothing -> Left "could not deref key"
     put n
-    return (Blob' val)
--}
+    return val
+
+-- | Wraps up two monadic actions into one: 
+--  
+--  1. loadf
+--  2. aliasK
+--
+--  This provides a slightly higher-level means of loading up a text file, in
+--  that it--by default--creates and exposes a human readable handle/alias
+--  which references the contents at the given 'FilePath'.
+loadf' :: FilePath -> T.Text -> NoteS String T.Text
+loadf' fp alias = loadf fp >>= aliasK alias
+
+-- | Fetch a 'Key''s contents, but from an 'Abbrev' ('ShortKey' a.t.m.).
+deref :: T.Text -> NoteS String T.Text
+deref abbr = do
+    n@(Note lnk vm abbr' sm) <- get
+    k <- liftEither $ case lengthen abbr' abbr of
+                        Just k -> Right k
+                        Nothing -> Left "abbr not found in Abbrev"
+    val <- liftEither $ case VM.deref vm k of
+                          Just b -> Right b
+                          Nothing -> Left "deref failed"
+    put n 
+    liftIO $ TIO.putStrLn val
+    return val
+
+link :: T.Text -> T.Text -> NoteS String ()
+link s o = do
+    n@(Note lnk vm abbr sm) <- get
+    st <- liftEither $ maybeToEither $ lengthen abbr s
+    ot <- liftEither $ maybeToEither $ lengthen abbr o
+    liftIO $ print s >> print "\n" >> print o
+    liftIO $ print st >> print "\n" >> print ot
+    let lnkr' = Link.insert (Subj st) (Obj ot) lnk
+    put (Note lnkr' vm abbr sm)
+    return ()
+
+
 loadf :: FilePath -> NoteS String (Key SHA1)
 loadf fp = do
     eCont <- liftIO $ 
@@ -133,71 +175,58 @@ loadf fp = do
                         Nothing -> Left "insertion failed."
     put (Note lnk vm' abbr sm)
     return k
-{-
-lsvm :: NoteS String ST
+
+lsvm :: NoteS String T.Text
 lsvm = do
     note <- get
     let s = show' $ getVMap note
     put note
-    return . Ls $  T.pack s
+    return $ T.pack s
 
-lslnk :: NoteS String ST
+lslnk :: NoteS String T.Text
 lslnk = do
     note <- get
     let s = pshow $ getLinks note
     put note
-    return . Ls $ T.pack s
+    return $ T.pack s
 
-lsabbr :: NoteS String ST
+lsabbr :: NoteS String T.Text
 lsabbr = do
     note <- get
     let s = show $ getAbbrev note
     put note
-    return . Ls $ T.pack s
+    return $ T.pack s
 
-
-runCmd :: Cmd -> Either String (NoteS String ST)
-runCmd (Cmd cmd args) = 
-    let f = M.lookup cmd ecmds
-     in case f of 
-          Just f' -> f' args
-          Nothing -> Left "cmd not found."
-
-abbr :: ST -> NoteS String ST
-abbr st = do
-    key <- liftEither $ getKey st
+abbr :: Key SHA1 -> NoteS String T.Text
+abbr key = do
     n@(Note lnk vm abbr sm) <- get
     let (abr, abbr') = abbrev' abbr key 
     put (Note lnk vm abbr' sm)
-    return (Abbr abr)
+    return abr
 
-vmkeys :: NoteS String ST
+vmkeys :: NoteS String [Key SHA1]
 vmkeys = do
     note <- get
-    let x = appVM M.keys $ getVMap note
+    let ks = appVM M.keys $ getVMap note
     put note
-    return . List $ map (Key' . toAesonKey) x
+    return ks
 
-abbrkeys :: NoteS String ST
+abbrkeys :: NoteS String [T.Text]
 abbrkeys = do
     note <- get
-    let x = getAbbrKeys $ getAbbrev note
+    let ks = getAbbrKeys $ getAbbrev note
     put note
-    return . List $ map Abbr x
+    return $ ks
 
 -- abbrs
-linksto :: ST -> NoteS String ST
-linksto st = do
+linksto :: Key SHA1 -> NoteS String [T.Text]
+linksto key = do
     note <- get
-    abbr <- liftEither $ getAbbr st
-    obj <- liftEither $ 
-        case lengthen (getAbbrev note) abbr of
-          Just k -> Right $ Obj k
-          Nothing -> Left "could not find key matching abbr"
-    let subjs =  linksTo (getLinks note) obj
+    let subjs =  linksTo (getLinks note) (Obj key)
     put note
-    return . List $ map (\(Subj k) -> Abbr . take' 8 $ keyToText k) subjs
+    return $ map (\(Subj k) ->  take' 8 $ keyToText k) subjs
 
+{-
 -- keys
 linkstoK :: ST -> NoteS String ST
 linkstoK st = do
