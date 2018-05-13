@@ -77,13 +77,13 @@ empty = Links M.empty M.empty
 --
 -- This required /so/ many extensions.
 class Linker (linker :: * -> *) alg where
-    {-# MINIMAL linksTo, linksFrom, insertTo, insertFrom #-}
+    {-# MINIMAL isPointedToBy, pointsTo, insertTo, insertFrom #-}
     type Subject alg
     type Object alg 
-    -- | Lookup 'Subject's that link to the given 'Object'.
-    linksTo :: linker alg -> Object alg -> [Subject alg]
-    -- | Lookup 'Object's that link to the given 'Subject'.
-    linksFrom :: linker alg -> Subject alg -> [Object alg]
+    -- | Fetches the 'Subject' 'Key's pointed to by the given 'Object'.
+    isPointedToBy :: linker alg -> Object alg -> [Subject alg]
+    -- | Fetches which 'Object' 'Key's the given 'Subject points to.
+    pointsTo :: linker alg -> Subject alg -> [Object alg]
     -- | Insert link /from/ 'Subject' to 'Object'.
     insertFrom :: linker alg 
                   -> Subject alg
@@ -115,14 +115,14 @@ instance Linker Links alg where
     type Subject alg = Subj alg
     type Object alg = Obj alg
 
-    linksFrom :: Links alg -> Subject alg -> [Object alg]
-    linksFrom (Links to _) subj =
+    pointsTo :: Links alg -> Subject alg -> [Object alg]
+    pointsTo (Links to _) subj =
         case M.lookup subj to of
           Just objs -> objs
           Nothing -> []
 
-    linksTo :: Links alg -> Object alg -> [Subject alg]
-    linksTo (Links _ from) obj =
+    isPointedToBy :: Links alg -> Object alg -> [Subject alg]
+    isPointedToBy (Links _ from) obj =
         case M.lookup obj from of
           Just subjs -> subjs
           Nothing -> []

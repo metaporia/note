@@ -43,6 +43,7 @@ dependencies:
 - either
 - haskeline
 - process
+- checkers
 library:
   source-dirs: 
       - src

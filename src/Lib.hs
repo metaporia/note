@@ -1,15 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Lib where
 
-import Prelude hiding (init, lookup, insert, span)
+import Prelude
 
 import qualified Data.Map as M
 
@@ -45,19 +41,19 @@ import Note (Note(..), newNote, ls)
 import qualified Note
 import UI.Types (NoteS, runWith', keyToText)
 import Abbrev 
-import VMap hiding (deref)
+import VMap
 import qualified VMap as VM
-import Link
+import Link 
+import qualified Link as Lnk
 import Select
 
 
 
 runWith = runWith'
 
-run stateToRun state = runWith stateToRun state
-
-go state = run (state *> ls') newNote
-go_ state = void $ (run (state *> ls') newNote)
+go' state = run (state *> ls') newNote
+go_ state = void $ run (state *> ls') newNote
+go state = run state newNote
 
 
               
@@ -88,7 +84,7 @@ keepValue' ma f = ma >>= \a -> a <$ f a
 
 -- Internal API
 
--- | Binds @alias :: T.Text@ to @key :: Key SHA1@, and returns @alias@.
+-- | Binds @(alias :: T.Text)@ to @(key :: Key SHA1)@, and returns @alias@.
 aliasK :: T.Text -> Key SHA1 -> NoteS String T.Text
 aliasK alias key = do
     n@(Note lnk vm abbr sm) <- get
@@ -108,8 +104,8 @@ linkK k k' = do
 -- NB: While 'EitherT' encodes the possiblitiy of failure into 'NoteS', this is
 -- unrepresentative of the intended "deref invariant"--that is, 
 --
---      i) @k0 == hash $ deref k0@, and
---     ii) @deref k0 == Just v@.
+--      * @k0 == hash $ deref k0@, and
+--      * @deref k0 == Just v@.
 --
 -- Although the types do not reflect this (for the present), users should
 -- remain cognizant of the more overarching, implicit intent.
@@ -151,21 +147,20 @@ deref abbr = do
     liftIO $ TIO.putStrLn val
     return val
 
+-- | Link two aliases or abbreviations.
 link :: T.Text -> T.Text -> NoteS String ()
 link s o = do
     n@(Note lnk vm abbr sm) <- get
     st <- liftEither $ maybeToEither $ lengthen abbr s
     ot <- liftEither $ maybeToEither $ lengthen abbr o
-    liftIO $ print s >> print "\n" >> print o
-    liftIO $ print st >> print "\n" >> print ot
     let lnkr' = Link.insert (Subj st) (Obj ot) lnk
     put (Note lnkr' vm abbr sm)
     return ()
 
-
+-- | Creat a new 'Val' from a 'FilePath'.
 loadf :: FilePath -> NoteS String (Key SHA1)
 loadf fp = do
-    eCont <- liftIO $ 
+    eCont <- liftIO
         (try (TIO.readFile fp) :: IO (Either IOError T.Text))
     contents <- liftEither $ convertException eCont
     n@(Note lnk vm abbr sm) <- get
@@ -176,6 +171,7 @@ loadf fp = do
     put (Note lnk vm' abbr sm)
     return k
 
+-- | Pretty print the state's 'VMap'.
 lsvm :: NoteS String T.Text
 lsvm = do
     note <- get
@@ -183,6 +179,7 @@ lsvm = do
     put note
     return $ T.pack s
 
+-- | Pretty print the state's 'Linker'.
 lslnk :: NoteS String T.Text
 lslnk = do
     note <- get
@@ -190,6 +187,7 @@ lslnk = do
     put note
     return $ T.pack s
 
+-- | Pretty print the state's 'Abbrev.
 lsabbr :: NoteS String T.Text
 lsabbr = do
     note <- get
@@ -197,6 +195,7 @@ lsabbr = do
     put note
     return $ T.pack s
 
+-- | Shorten a key.
 abbr :: Key SHA1 -> NoteS String T.Text
 abbr key = do
     n@(Note lnk vm abbr sm) <- get
@@ -204,6 +203,7 @@ abbr key = do
     put (Note lnk vm abbr' sm)
     return abr
 
+-- | Fetch keys of 'Vmap'.
 vmkeys :: NoteS String [Key SHA1]
 vmkeys = do
     note <- get
@@ -211,60 +211,62 @@ vmkeys = do
     put note
     return ks
 
+-- | Fetch keys of 'Abbrev'.
 abbrkeys :: NoteS String [T.Text]
 abbrkeys = do
     note <- get
     let ks = getAbbrKeys $ getAbbrev note
     put note
-    return $ ks
+    return ks
 
--- abbrs
-linksto :: Key SHA1 -> NoteS String [T.Text]
-linksto key = do
+-- Looks up 'Subject's that link to the given 'Object'.
+--
+-- NB: Read as "fetch me the keys of 'Val's that point to /this/ --the
+-- 'Object''s-- 'Key''s 'Val'."
+isPointedToBy :: T.Text -- ^ 'Subject' abbreviation. "What points to this?" is the question 
+                  -- answered by 'linksto'.
+        -> NoteS String [T.Text] 
+isPointedToBy abbr = do
     note <- get
-    let subjs =  linksTo (getLinks note) (Obj key)
+    key <- liftEither $ case lengthen (getAbbrev note) abbr of
+                          Just k -> Right k
+                          Nothing -> Left "could not find key matching abbr"
+    let subjs =  Lnk.isPointedToBy (getLinks note) (Obj key)
     put note
     return $ map (\(Subj k) ->  take' 8 $ keyToText k) subjs
 
-{-
--- keys
-linkstoK :: ST -> NoteS String ST
-linkstoK st = do
+-- | 'linksto' for 'Key's.
+isPointedToByK :: Key SHA1 -> NoteS String [Key SHA1]
+isPointedToByK key = do
     note <- get
-    key <- liftEither $ getKey st
-    let obj = Obj key
-        subjs =  linksTo (getLinks note) obj
+    let subjs =  Lnk.isPointedToBy (getLinks note) $ Obj key
     put note
-    return . List $ map (\(Subj k) -> Key' . toAesonKey $ k) subjs
+    return $ map (\(Subj k) -> k) subjs
 
-            
-linksfrom :: ST -> NoteS String ST
-linksfrom st = do
+-- | Looks up 'Object's linked to /from/ the given 'Subject'.
+pointsTo :: T.Text -> NoteS String [T.Text]
+pointsTo abbr = do
     note <- get
-    abbr <- liftEither $ getAbbr st
     subj <- liftEither $ 
         case lengthen (getAbbrev note) abbr of
           Just k -> Right $ Subj k
           Nothing -> Left "could not find key matching abbr"
-    let objs =  linksFrom (getLinks note) subj
+    let objs =  Lnk.pointsTo (getLinks note) subj
     put note
-    return . List $ map (\(Obj k) -> Abbr 
-                                   . T.pack 
-                                   . take 8 $ show k) objs
+    return $ map (\(Obj k) -> T.pack . take 8 $ show k) objs
 
-linksfromK :: ST -> NoteS String ST
-linksfromK st = do
+-- | 'linksfrom' for 'Key's.
+pointsToK :: Key SHA1 -> NoteS String [Key SHA1]
+pointsToK key = do
     note <- get
-    key <- liftEither $ getKey st
     let subj = Subj key
-        objs =  linksFrom (getLinks note) subj
+        objs =  Lnk.pointsTo (getLinks note) subj
     put note
-    return . List $ map (\(Obj k) -> Key' . toAesonKey $ k) objs
+    return $ map (\(Obj k) -> k) objs
 
--- | Adds 'Span'' to VMap, SelMap
-selectK :: ST -> NoteS String ST
-selectK st = do
-    (sourceKey, sel) <- liftEither $ getSpan st
+-- | Applies 'select' to 'Key's.
+selectK :: Key SHA1 -> Selection -> NoteS String (Key SHA1)
+selectK sourceKey sel = do
     (Note lnk vm abbr sm) <- get
     (vm', spanKey) <- liftEither $ 
         case insertRawSpan sourceKey sel vm of
@@ -272,27 +274,17 @@ selectK st = do
           Nothing -> Left "unable to deref span's target key"
     let sm' = registerSpanInsertion spanKey sourceKey sel sm
     put (Note lnk vm' abbr sm')
+    return spanKey
 
-    return (Key' $ toAesonKey spanKey)
--- 1.  insertRawSpan k s
--- 2. registerSpanInsertion  spankey (Span k s)
--- 3. return (key' spankey)
-
--- | 'selectK' for 'Abbr'
-select :: ST -> ST -> NoteS String ST
-select st st' = do
+-- | Apply, and register, a 'Selection' to the 'Val' of the 'Key' of the
+-- given abbreviation, @a :: T.Text@. 
+select :: T.Text -> Selection -> NoteS String (Key SHA1)
+select a sel  = do
     (Note lnk vm abbr sm) <- get
-    a <- liftEither $ getAbbr st
-    sel <- liftEither $ getSel' st'
     sourceKey <- liftEither $
         case lengthen abbr a of
           Just k -> Right k
           Nothing -> Left "could not lengthen key"
-    (vm', spanKey) <- liftEither $ 
-        case insertRawSpan sourceKey sel vm of
-          Just (vm', spanKey) -> Right (vm', spanKey) 
-          Nothing -> Left "unable to deref span's target key"
     let sm' = registerSpanInsertion spanKey sourceKey sel sm
     put (Note lnk vm' abbr sm')
-    return (Key' $ toAesonKey spanKey)
--} 
+    return spanKey

@@ -58,7 +58,8 @@ import Data.Char (digitToInt)
 import Data.List.Split (chunksOf)
 import Numeric (showHex)
 
-import Link
+import Link hiding (pointsTo, isPointedToBy)
+import qualified Link as Lnk
 import qualified VMap as VM
 import VMap
 import qualified Abbrev
@@ -204,10 +205,10 @@ ecmds = M.fromList [ ("derefK", apply' derefKey)
                    , ("alias", apply2' alias)
                    , ("vmkeys", const (return vmkeys))
                    , ("abbrkeys", const (return abbrkeys))
-                   , ("linksto", apply' linksto)
-                   , ("linkstoK", apply' linkstoK)
-                   , ("linksfrom", apply' linksfrom)
-                   , ("linksfromK", apply' linksfromK)
+                   , ("pointsto", apply'  pointsTo)
+                   , ("pointstoK", apply' pointsToK)
+                   , ("ispointedtoby", apply'  isPointedToBy)
+                   , ("ispointedtobyK", apply' isPointedToByK)
                    , ("linkK", apply2' linkK) 
                    , ("link", apply2' link) 
                    , ("selectK", apply' selectK)
@@ -337,49 +338,49 @@ abbrkeys = do
     return . List $ map Abbr x
 
 -- abbrs
-linksto :: ST -> NoteS String ST
-linksto st = do
+isPointedToBy :: ST -> NoteS String ST
+isPointedToBy st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     obj <- liftEither $ 
         case lengthen (getAbbrev note) abbr of
           Just k -> Right $ Obj k
           Nothing -> Left "could not find key matching abbr"
-    let subjs =  linksTo (getLinks note) obj
+    let subjs =  Lnk.isPointedToBy (getLinks note) obj
     put note
     return . List $ map (\(Subj k) -> Abbr . take' 8 $ keyToText k) subjs
 
 -- keys
-linkstoK :: ST -> NoteS String ST
-linkstoK st = do
+isPointedToByK :: ST -> NoteS String ST
+isPointedToByK st = do
     note <- get
     key <- liftEither $ getKey st
     let obj = Obj key
-        subjs =  linksTo (getLinks note) obj
+        subjs =  Lnk.isPointedToBy (getLinks note) obj
     put note
     return . List $ map (\(Subj k) -> Key' . toAesonKey $ k) subjs
 
             
-linksfrom :: ST -> NoteS String ST
-linksfrom st = do
+pointsTo :: ST -> NoteS String ST
+pointsTo st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     subj <- liftEither $ 
         case lengthen (getAbbrev note) abbr of
           Just k -> Right $ Subj k
           Nothing -> Left "could not find key matching abbr"
-    let objs =  linksFrom (getLinks note) subj
+    let objs =  Lnk.pointsTo (getLinks note) subj
     put note
     return . List $ map (\(Obj k) -> Abbr 
                                    . T.pack 
                                    . take 8 $ show k) objs
 
-linksfromK :: ST -> NoteS String ST
-linksfromK st = do
+pointsToK :: ST -> NoteS String ST
+pointsToK st = do
     note <- get
     key <- liftEither $ getKey st
     let subj = Subj key
-        objs =  linksFrom (getLinks note) subj
+        objs =  Lnk.pointsTo (getLinks note) subj
     put note
     return . List $ map (\(Obj k) -> Key' . toAesonKey $ k) objs
 
