@@ -39,17 +39,20 @@ import Data.Monoid ((<>))
 
 import Note (Note(..), newNote, ls)
 import qualified Note
-import UI.Types (NoteS, runWith', keyToText)
+import UI.Types (NoteS, runWith', keyToText, derefAbbr)
+import UI.Vi
 import Abbrev 
-import VMap
+import VMap hiding (deref)
 import qualified VMap as VM
-import Link 
+import Link hiding (pointsTo, isPointedToBy)
 import qualified Link as Lnk
-import Select
+import Select hiding (Start, End)
+import Val
 
 
 
 runWith = runWith'
+run = runWith'
 
 go' state = run (state *> ls') newNote
 go_ state = void $ run (state *> ls') newNote
@@ -68,10 +71,30 @@ ls' = do n <- get
          put n
          return ()
 
-one = loadf "work" >>= aliasK "work"
-two = loadf "specificity.md"  >>= aliasK "spec"
+paper = loadf' "mock/paper3.md" "paper"
 
-three = join $ liftM2 linkK (loadf "work") (loadf "specificity.md")
+onea = paper -- start is inclusive, end is exclusive
+    *> uncurry (selectPosn "paper") (selLine 17 8 14)
+    >>= aliasK "1a" 
+    >> selectPosn "paper" (CursorPosn 216 1) (CursorPosn 216 57)
+    >>= aliasK "c1"
+    >> link "c1" "1a" 
+    >> isPointedToBy "1a" 
+    -- >> deref "c1a"
+
+oneb = onea
+    >> uncurry (selectPosn "paper") (selLine 17 28 38)
+    >>= aliasK "1b"
+    >> link "c1" "1b"
+    >> deref "c1"
+
+    -- >> uncurry (selectPosn "paper") (selLine 217 1 60)
+    -- >>= aliasK "c1b"
+n :: NoteS String (Note SHA1 T.Text)
+n = do e <- liftIO $ go onea
+       n <- get
+       let t = fst $ fromRight e
+       return n
 
 keepValue :: Monad m => m a -> (a -> m b) -> m a
 keepValue ma f = do
@@ -80,7 +103,6 @@ keepValue ma f = do
 
 keepValue' :: Monad m => m a -> (a -> m b) -> m a
 keepValue' ma f = ma >>= \a -> a <$ f a
-
 
 -- Internal API
 
@@ -133,6 +155,40 @@ derefK k = do
 loadf' :: FilePath -> T.Text -> NoteS String T.Text
 loadf' fp alias = loadf fp >>= aliasK alias
 
+loadK :: T.Text -> NoteS String (Key SHA1)
+loadK t = do
+    n@(Note lnk vm abbr sm) <- get
+    let (vm', mK) = insertRawBlob t vm
+    k <- liftEither $ case mK of
+                        Just k' -> Right k'
+                        Nothing -> Left "insertion failed."
+    put (Note lnk vm' abbr sm)
+    return k
+
+load :: T.Text -> NoteS String (T.Text)
+load t = loadK t >>= abbr
+
+lookupK :: Key SHA1 -> NoteS String (Val SHA1 T.Text)
+lookupK k =  do
+    n@(Note lnk vm abbr sm) <- get
+    val <- liftEither $ case VM.lookup vm k of
+                          Just v  -> Right v 
+                          Nothing -> Left "key not found in vmap"
+    put (Note lnk vm abbr sm)
+    return val
+
+lookup :: T.Text -> NoteS String (Val SHA1 T.Text)
+lookup t = lengthen' t >>= lookupK
+
+lengthen' :: T.Text -> NoteS String (Key SHA1)
+lengthen' a = do
+    n <- get
+    k <- liftEither $ case lengthen (getAbbrev n) a of
+                        Just k  -> Right k
+                        Nothing -> Left "no key assoc'd w given abbr"
+    put n
+    return k
+
 -- | Fetch a 'Key''s contents, but from an 'Abbrev' ('ShortKey' a.t.m.).
 deref :: T.Text -> NoteS String T.Text
 deref abbr = do
@@ -141,7 +197,7 @@ deref abbr = do
                         Just k -> Right k
                         Nothing -> Left "abbr not found in Abbrev"
     val <- liftEither $ case VM.deref vm k of
-                          Just b -> Right b
+                          Just b  -> Right b
                           Nothing -> Left "deref failed"
     put n 
     liftIO $ TIO.putStrLn val
@@ -233,7 +289,7 @@ isPointedToBy abbr = do
                           Nothing -> Left "could not find key matching abbr"
     let subjs =  Lnk.isPointedToBy (getLinks note) (Obj key)
     put note
-    return $ map (\(Subj k) ->  take' 8 $ keyToText k) subjs
+    return $ map (\(Subj k) ->  T.pack . take 8 $ show k) subjs
 
 -- | 'linksto' for 'Key's.
 isPointedToByK :: Key SHA1 -> NoteS String [Key SHA1]
@@ -285,6 +341,28 @@ select a sel  = do
         case lengthen abbr a of
           Just k -> Right k
           Nothing -> Left "could not lengthen key"
+    (vm', spanKey) <- liftEither $ 
+        case insertRawSpan sourceKey sel vm of
+          Just (vm', spanKey) -> Right (vm', spanKey) 
+          Nothing -> Left "unable to deref span's target key"
     let sm' = registerSpanInsertion spanKey sourceKey sel sm
     put (Note lnk vm' abbr sm')
     return spanKey
+
+-- | Like 'select', but additionally performs 'CursorPosn' to 'Selection'
+-- conversion.
+selectPosn :: T.Text -> CursorPosn -> CursorPosn -> NoteS String (Key SHA1)
+selectPosn a s e = do
+    (Note lnk vm abbr sm) <- get
+    sourceKey <- liftEither $
+        case lengthen abbr a of 
+          Just k -> Right k
+          Nothing -> Left "unable to deref span's target key"
+    let convert pt' x = liftEither $ case cursorToIdx' vm sourceKey pt' x of
+                          Just i -> Right i
+                          Nothing -> Left "unable to convert 'CursorPosn' to 'Int'"
+    s' <- convert Start s
+    e' <- convert End e
+    selectK sourceKey (Sel s' e')
+                    
+

@@ -38,7 +38,7 @@ import qualified VMap as VM
 import VMap
 import Abbrev
 import Helpers 
-import Select
+import Select hiding (Start, End)
 import Val
 
 s' = [r|aoeu
@@ -46,6 +46,13 @@ aoeu
 aoeu
 |]
 
+
+f = TIO.readFile "mock/paper3.md"
+sidx = f >>= return . (\x -> posnToIdx' Start x  s)
+eidx = f >>= return . (\x -> posnToIdx' End x  e)
+
+s = (CursorPosn 216 1)
+e = (CursorPosn 216 57)
 
 data CursorPosn = 
     CursorPosn { row :: Int
@@ -63,30 +70,48 @@ data ViSel =
 -- under 'Map'
 --
 -- Converts a 'CursorPosn' to an index.
-cursorToIdx :: forall alg c. (Eq c, Splittable c, IsString c)
-            => VMap alg c -> Key alg -> CursorPosn -> Maybe Int
-cursorToIdx vm k cur = 
-    let val = case lookup vm k of 
-                Just (Blob _ c) -> posnToIdx c cur
-                Just (Span k' sel') -> cursorToIdx vm k' cur
-                Nothing -> Nothing
+--cursorToIdx :: forall alg c. (Eq c, Splittable c, IsString c)
+--            => VMap alg c -> Key alg -> CursorPosn -> Maybe Int
+--cursorToIdx vm k cur = 
+--    case lookup vm k of 
+--                Just (Blob _ c) -> posnToIdx c cur
+--                Just (Span k' sel') -> cursorToIdx vm k' cur
+--                Nothing -> Nothing
 
-     in  undefined
+-- concretized for ease of prototyping
+cursorToIdx' :: VMap SHA1 T.Text 
+             -> Key SHA1 
+             -> PosnType 
+             -> CursorPosn 
+             -> Maybe Int
+cursorToIdx' vm k pt cur = 
+    case lookup vm k of 
+      Just (Blob _ c) -> posnToIdx' pt c cur
+      Just (Span k' sel') -> cursorToIdx' vm k' pt cur
+      Nothing -> Nothing
 
+data PosnType = Start | End deriving (Eq, Show)
 
-posnToIdx :: (IsString c, Eq c, Splittable c) => c -> CursorPosn -> Maybe Int
-posnToIdx s (CursorPosn row col)
-    | null' s = Nothing
-    | otherwise =
-    let lns = splitOn' "\n" s
-        idxBarLastLn = sum . map len $ take (row - 1) lns
-        end = if len lns > (row - 1)
-                 then Just $ lns !! (row - 1)
-                 else Nothing
-     in do lastLen <- fmap len end
-           if col <= lastLen
-              then Just(idxBarLastLn + col)
-               else Nothing
+posnToIdx' :: PosnType -> T.Text -> CursorPosn -> Maybe Int
+posnToIdx' pt s (CursorPosn row col)
+  | T.null s = Nothing
+  | otherwise =
+      let lns = take row $ T.lines s
+          count = T.length . T.unlines $ take (row - 1) lns
+          lastLine = if len lns > (row - 1)
+                        then Just $ last . take row $ lns
+                        else Nothing
+
+       in do lastLine' <- lastLine 
+             if col <= len lastLine'
+                then Just $ count + (case pt of
+                                       Start -> col - 1
+                                       End -> col)
+                else Nothing
+
+selLine :: Int -> Int -> Int -> (CursorPosn, CursorPosn)
+selLine row colS colE = (CursorPosn row colS, CursorPosn row colE)
+
 
 -- | Convert selection based-on 'CursorPosn'--which respects newlines--to the
 -- selection structure used internally; that is, 'Span', within which a

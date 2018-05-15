@@ -22,12 +22,12 @@ import VMap (HashAlg)
 newtype Subj alg = Subj { getSubj :: Key alg} deriving (Eq, Ord)
 
 instance Show (Subj alg) where
-    show (Subj k) = take 7 $ show k
+    show (Subj k) = take 8 $ show k
 
 newtype Obj alg = Obj { getObj :: Key alg} deriving (Eq, Ord)
 
 instance Show (Obj alg) where
-    show (Obj k) = take 7 $ show k
+    show (Obj k) = take 8 $ show k
 
 
 -- | Like a bimap, but instead of mapping @a -> b@, and @b -> a@
@@ -51,8 +51,8 @@ pshow (Links from to) = "*from* Subj to Obj:\n"
                       ++ "\nfrom Obj *to* Subj:\n"
                       ++ (go $ M.toList to) 
     where go [] = []
-          go ((k, ks):xs) = take 7 (show k) ++ " -> " 
-                        ++ (show $ map (take 7 . show) ks)
+          go ((k, ks):xs) = take 8 (show k) ++ " -> " 
+                        ++ (show $ map (take 8 . show) ks)
                         ++ "\n"
                         ++ go xs
 

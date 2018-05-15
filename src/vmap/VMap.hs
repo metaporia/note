@@ -111,7 +111,7 @@ deref' m k = case lookup m k of
               Just (Blob _ b) -> Right b
               Just (Span key sel') -> 
                   case deref m key >>= return . getSel . flip sel sel' of
-                    Just c -> Right c
+                    Just c  -> Right c
                     Nothing -> Left "span inner key note found in vmap"
               _ -> Left "key not found in vmap"
 
@@ -228,6 +228,5 @@ fit i (Blob l b)
 fit i (Span _ (Sel s e)) = 
     let (before, after) = (abs i, abs $ (e - s) - i)
      in Just $ before + after
-
 
 

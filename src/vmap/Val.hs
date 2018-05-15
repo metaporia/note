@@ -21,6 +21,14 @@ mkBlob c = Blob (len c) c
 mkSpan :: Key alg -> Selection -> Val alg c
 mkSpan key sel = Span key sel
 
+fromSpan :: Val alg c -> Either String (Key alg, Selection)
+fromSpan (Span k s) = Right (k, s)
+fromSpan _ = Left "expected variant 'Span'"
+
+fromBlob :: Val alg c -> Either String (Int, c)
+fromBlob (Blob l c) = Right (l, c)
+fromBlob _ = Left "expect variant 'Blob'"
+
 instance forall c alg. (Show c, Show alg) => Show (Val alg c) where
     show (Blob l b) = show b
     show (Span key sel) = show (showAbbrev key) ++ show sel
@@ -31,4 +39,3 @@ instance forall c alg. (Show c, Show alg) => Show (Val alg c) where
 instance Functor (Val alg) where
     fmap _ (Span key sel) = Span key sel
     fmap f (Blob l c) = Blob l $ f c
-
