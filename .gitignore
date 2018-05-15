@@ -1,3 +1,6 @@
 .stack-work/
 note.cabal
+codex.tags
+sesh
+repl.history
 *~

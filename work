@@ -1,0 +1,1 @@
+vi src/link/Link.hs src/{Parse,Select,Lib,Helpers}.hs src/vmap/{Val,VMap}.hs src/UI/Vi.hs

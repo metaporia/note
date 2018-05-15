@@ -1,10 +1,10 @@
 name:                note
 version:             0.1.0.0
-github:              "githubuser/note"
+git:                 "https://bitbucket.org/HelloKitty8/hs-note"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Keane Yahn-Krafft"
+maintainer:          "thisaintforuruse@gmail.com"
+copyright:           "2018 Keane Yahn-Krafft"
 
 extra-source-files:
 - README.md
@@ -22,32 +22,86 @@ description:         Please see the README on Github at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - containers
-
+- cryptonite
+- bytestring
+- bytestring-conversion
+- text
+- memory >= 0.14.16
+- mtl >= 2.2.2
+- transformers
+- raw-strings-qq
+- byteable
+- trifecta
+- network
+- split
+- aeson
+- binary
+- network-socket-options
+- tostring
+- base64-bytestring
+- unix
+- either
+- haskeline
+- process
+- checkers
 library:
   source-dirs: 
       - src
-      - src/blobmap
+      - src/vmap
+      - src/link
   exposed-modules:
+      - Link
       - Lib
-      - ContentMap
-  other-modules:
-      - Content
-      - Handle
+      - Val
+      - VMap
+      - Select
+      - Helpers
+      - UI.Vi
+      - UI.Service
+      - UI.Types
+      - UI.REPL
+      - Note
+      - Abbrev
+      - Parse
+  other-modules: []
+
 executables:
-  note-exe:
-    main:                Main.hs
-    source-dirs:         app
+  note-tui:
+    main:               Main.hs
+    source-dirs:        app/tui
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - note
+    - brick
+    - microlens-th
+    - microlens
+    - vty
+
+  note-serve:
+    main:                Main.hs
+    source-dirs:         app/serve
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+        - note
+  note-repl :
+    main:                Main.hs
+    source-dirs:         app/repl
+    dependencies:
+        - note
+        - aeson
+
 
 tests:
   note-test:
-    main:                Spec.hs
-    source-dirs:         test
+    main:                Main.hs
+    source-dirs:         
+    - test
     ghc-options:
     - -threaded
     - -rtsopts

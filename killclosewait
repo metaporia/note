@@ -1,0 +1,1 @@
+netstat -anp | grep 4242 | awk '{print $7}' | cut -d \/ -f1 | grep -oE "[[:digit:]]{1,}" | xargs kill
