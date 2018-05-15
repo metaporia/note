@@ -3,9 +3,24 @@
 module Parse where
 
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import Text.RawString.QQ
-import Text.Trifecta
+import qualified Data.Text.Lazy as TL
+import Text.Trifecta hiding (rendered, render)
 import Control.Applicative
+import Data.Monoid ((<>))
+import Data.Bifunctor
+
+import Control.Monad.Except
+
+import Lib
+import Select (Selection(..))
+
+import Helpers
+import Crypto.Hash
+import Val
+import Select
+
 
 -- '*.note' format: 
 --
@@ -118,4 +133,113 @@ newtype AliasLink c = AliasLink (Alias c , Alias c) deriving (Eq, Show)
 
 parseLink :: Parser (AliasLink String)
 parseLink = (AliasLink .) . (,) <$> parseAlias <*> parseSndAlias
+
+-- to/from  note markup format.
+--
+-- desideratum: max 'MetaData' (term) constructor name length of, say, 17?
+--              (for consistent left-hand side padding)
+--
+-- | In the case of the lines marked 'p`' (at offsets +7, +9, respectively):
+--  
+--  * some lookahead ahead is required,
+--  * multiple passes are required, or
+--  * something else that parses multi-line partial spans
+--
+--
+--  The following must be renderable:
+--      
+--  * one partial span (per line)
+--  * (?: future) multiple partial spans (one identifier, e.g., p^)
+--  * multiple partial spans, identifiers
+--  * multi-line spans
+--  * multi-line spans, sandwiched by optional partial spans
+--
+rendered :: T.Text
+rendered = [r|
+  p^| From a humble $13.50, to a gargantuan $750, the price of a life saving drug
+    |        ^^^^^^              ^^^^^^^^^^
+  p~| skyrocketed overnight [1].  Daraprim, as a drug that treats toxoplasmosis,
+    |                       ~~~             '''''''''
+  p`| sparked enormous controversy over the price hike.  People, outraged, argued
+    |                                                                      ``````
+  p`| there is ethical obligation to lower drug prices.  Companies in return
+    | `````
+  p<| disavowed any moral obligation to lower prices, and claim R&D efforts will
+    |                                                     <<<<<
+    | result in more life saving medications [2]
+    |
+    |
+   &|     And here is another line of unremittingly brilliant lexical ejaculate--and
+   &| get this, it even spans multiple lines!
+    |
+   #|     And here is another line of unremittingly brilliant lexical ejaculate--and
+   #| get this, it even spans multiple lines!--
+  p#| and even some more.
+    | #############
+|]
+
+-- target 0: one partial span per line
+r0 = [ ( "sparked enormous controversy over the price hike.  People, outraged, argued", "p^")
+     , ( "                                                                     ``````", "")
+     , ( "disavowed any moral obligation to lower prices, and claim R&D efforts will", "p<")
+     , ( "                                                    <<<<<", "")
+     ]
+
+-- this intermediate format which can be directly rendered, serialized (to
+-- JSON?) or loaded into program state, viz. 'NoteS'.
+r1 = [ ( "sparked enormous controversy over the price hike.  People, outraged, argued", [Partial 69 75 '`'])
+     , ( "disavowed any moral obligation to lower prices, and claim R&D efforts will",  [Partial 52 57 '<'])]
+
+sr = fst $ r0 !! 0
+sr' = fst  $ r0 !! 2
+
+r3 = loadK sr  >>= (\k -> selectK k (Sel 69 75)) 
+     -- >> loadK sr' >>= (\k -> selectK k (Sel 52 57)) 
+     >>= lookupK
+     >>= liftEither . fromSpan
+     >>= (\(k, (Sel s e)) -> return $  (k, [Partial s e '^']))
+
+
+data LineTag = 
+     Partial Int Int Char -- ^ @Partial sIdx eIxd c@ describes a single partial span (1 ln).
+   | Whole Char -- ^ a whole line selection, which may have fellows ('LineTag's w the same 'Char')
+   | RenderedLine
+   deriving (Eq, Show)
+
+rend :: T.Text
+rend = [r|
+hello world | PartialSel '^'
+      ^^^^^
+|]
+
+
+leftPadding = 17
+
+-- there
+conv0 :: [(T.Text, T.Text)]
+conv0 = [ ("hello world", "p^" )
+        , ("      ^^^^^", "") ]
+
+conv1 :: [(T.Text, [LineTag])]
+conv1 = [ ("hello world", [Partial 6 11 '^'])]
+
+conv2 = loadK "hello world" >>= \k -> selectK k (Sel 6 11)
+-- and back again
+undoConv2 = conv2 
+        >>= lookupK 
+        >>= liftEither . fromSpan 
+        >>= (\(k, (Sel s e)) -> return $  (k, [Partial s e '^']))
+        >>= (\(k, ps) -> do val <- derefK k
+                            return (val, ps))
+
+newtype Rendering = Rendering { getRend :: [(T.Text, [LineTag])] } deriving (Eq, Show)
+
+-- | Takes a 'Key' to a 'Blob' and converts the assoc'd 'Blob' to a Rendering.
+intoRendering :: Key SHA1 -> NoteS String Rendering
+intoRendering = undefined
+
+-- | Apply 'Selection' to 'Rendering'.
+applySelection :: Selection -> Rendering -> Rendering
+applySelection = undefined
+
 

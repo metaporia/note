@@ -211,3 +211,181 @@ Jun. 2002.
 
 [5]V. Dirnfeld, "The Benefits of Privatization", Canadian Medical Association
 Journal, pp. 407-409, 1996.
+
+# Corrections
+(1): 1a and 1b are a bit dramatic/imprecise. word choice.
+(2): check pandoc flags for super-script citation numbering.
+(3): "as a drug..." -> "a drug...": 
+    Unnecessary specification of role with "as". 
+(4): "argued there..." -> "argued that there" :
+    I dunno about this, but the "that" seems safer.
+(5): "claim" -> "claimed":
+    Maintain past-tense? You used "disavowed", so "claimed" seems more
+    appropriate, otherwise change "disavowed" to "disavow".
+(6): "populous" -> "populace"
+(7):  clarify
+    Who is "everyone" -- citizens? humans?  What justifies "should"? On what
+    grounds ought we provide care? (This "should" comment may be premature.)
+(8): word choice
+    What is "need"?
+(9):
+    Such as?
+(10): word choice
+    What a good word! There may be less obtuse synonyms however, especially
+    since you speak of prices in the surrounding sentences; I thought you
+    referred to the currency -- admittedly I didn't know the word "yen".
+(11): weak, or imprecise metaphor?
+    I'm not sure how well this works. Metaphors are tricky business; use at
+    your own risk.
+(12):  vague
+    Whose morality is lacking here and why does their deficiency matter? It
+    seems a bit of a jump to suddenly concern the reader with the capacity of
+    the average citizen's moral framework to meaningfully analyze the
+    pharmaceutical industry. That of a politician or a drug rep/CEO would seem
+    more natural, otherwise some transition, or explanation/justification of
+    relevence seems appropriate.
+(13): "lack" -> "lacks"
+    Singular conjugation as determined by use of the subject "conception".
+(14): more vagueness
+    The answer to what specific couching/framing of the issue? You may want to
+    summarize the issue in a kind of distilled problem statement after
+    introducing the backgound info, so that there is a specific question to
+    which the "answer" replies.
+(15): word choice
+    Can a drug "trek"? It seems an anthropomorphization only justifiable if the
+    responsible verb lends a particularly expressive analogy.
+(16): "complex multi..." -> "complex, multi..." ? idk for sure.   
+(17): "expired the..." -> "expired, the..." 
+(18): comma again
+(19): informality
+    Is "pharma" an appropriate term in a formal essay?
+(20): uniform plurality in list
+    Would "governments" work, or are the pharma companies subject to discussion
+    selling exclusively to the U.S. gov't? In any case, elements in a list
+    should have the same tense, plurality, etc.
+(21): "and sometimes sell directly to patients" -> "and, sometimes, to patients" 
+    Same reason as (20).
+(22): Unnecessarily specific article. Omit "the".
+(23): 
+    This and the previous sentence are a bit redundant. They could be
+    combined.
+    Do pharmacies have any other responsibilites? It was slightly unclear if
+    there duties included, or were limited to, those stated.
+(24): plurality agreement?
+    Can 24a, the singular "concept" represent "relationships"? Perhaps you mean
+    someting more in the vein of "the next concepts covered decribe financial
+    relationships"?
+(25): see (22)
+(26): like (20), "derived from the demand of.." -> "derived from demand for.."
+"the patients' ability..." -> "patient buying/purchasing power"
+(27): see (22).
+(28): "off" -> "offer"
+(29): Generally, use "based off of" or "based on". 
+    In this case, don't use "off" as you use "offer" only a few words prior and
+    the phonetic similarity is off-putting.
+(30): "..een average.." -> "..een the average.."
+(31): semantic ambiguity
+    This one, I think, is on me; I don't understand how an average price is
+    obtained prior to setting discounted prices as the average includes the
+    discounted ones, no? Perhaps a bit more clarity is needed, or I'm a
+    dumbass; sadly they're not mutually exclusive.
+(32): omit "the ability"
+(33): Coverage of the role of insurance (companies)
+    Perhaps I'm off base here, but I'd like more detail regarding the role of
+    insurance companies, or PBMs, as you refer to them, especially as they
+    impact the consumer perception of pricing.
+(34): "approach on" -> "approach to"
+(35): see (7). This is prolly the better place to address the ambiguity.
+(36): issue of chronology
+    Rawls expanded upon Kant's ideas with his theory of justice, not the
+    other way around.
+(37): see (29)
+(38): "posses" -> "possess" | "posses [sic]"
+(39): "affect's" -> "affects"
+(40): "ones" -> "one's"
+(41): "right certain.." -> "right to certain.."
+(42): "need" see (8)
+    Also, I presume you are explaining the position of a Rawlsian approach.
+    If so clarify. It read as though, _you_ asserted that "need".
+(43): "equally" is vague as shit. 
+    Perhaps whip out Rawls' Veil of Innocence to provide _some_ metric for
+    "equality"?
+(44): redundant
+    the disadvantaged will of course, almost by definition, hold a "worse
+    position"
+(45): vague; dependent on implicit definitions of "merit" and such
+    naturally the generally disadvantaged are worse off than those with the
+    oh-so-broad "merit" of which you speak. What is this "merit"? How is it
+    identified and weighed?
+(46): unclear
+    The possibility of what? A comma may be needed before "the less fort..."
+(47): fragment
+    I'm not sure what's being said. Is it more than just: "High prices preclude
+    the pragmatic purchase of pharmaceuticals by those with less-than-average
+    purchasing power, in [a] blatant violation of the aforesaid Rawlsian perspective." ?
+(48): clarify the solution
+    "bear the burden" as in pay for those unable to afford, but still in need
+    of drugs?
+(49): obtuse word. define it.
+(50): comma "support, critical"
+    Also, "critical progroms" such as?
+(51): "services" -> "services'" ?
+(52): word choice, vague. 
+    c'mon "everyone" ? how about "qualifying Canadian citizens" 
+
+(53): awkward phrasing. omit "an" or rewrite clause
+(54): hahahaha
+    "fall short of...", or if you insist on a dash of humor, "fall
+    far past short of..". I would advise moderation.  
+    
+    Also, do you mean that ethical arguments in favor of contriving a pricing
+    scheme are inadequate or that ethical arguments presenting an
+    already-formulated pricing scheme fall short?
+(55):   
+    Of course, naturally -- obviously even --, nothing is obvious. Everyone
+    knows that.
+(56): awkward phrasing
+    Perhaps, "Reconciling obliged sympathy for patients with the pragmatic,
+    logistical constraints of the non-theorectical..." suffices to express the
+    tension?
+(57): word choice: "smart"?!!! clarify
+(58): "as well as" -> "and"
+(59): "for cheap" -> "cheaply"
+(60): who where. c'mon. in what capacity? insurance, lower prices, both?
+(61): this sentence be broke af. 
+    Maybe, "Without third-party financing, the pharma industry won't be able to
+    provide low prices while still funnelling resources into R&D, even with
+    gov't subsidies." ? I'm a bit unclear as to what you wish to convey here,
+    so idk if you should just fix the grammar/ambiguity, or rewrite to clarify
+    and then check for grammar mistakes.
+
+(62): unclear
+(63): "to support its production" -> "to sustain production" ? idk
+(64): double use of without. unclear
+(65): "civilization" -> "civilizations" ? 
+(66): inconsistent use of subjunctive mood
+    either make the first clause conditional (or set in the future) or change
+    "would be left out to dry" to "are left out to dry"
+(67): what kind of Utilitarian stance? expand.
+(68): comma abuse. there's no need to put a comma after the subject
+(69): "for diseases" -> "for more diseases" ?
+    the object is the curability of more diseases, not necessarily a profusion
+    of treatments for maladies for which we alread have cures, no?
+(70): now use the subjunctive, as in "companies would/could provide"
+(71): "deciding to use" -> "using" 
+(72): The regulation will be affordable? 
+    More like, "regulation could constrain a private insurance system such that premiums
+    would be affordable to (most) wage-earners..."
+(73):   
+    isn't this how premiums are set currently? I'm a little confused. Don't
+    most corporate insurance-as-a-benefit deals depend upon just such an
+    company-wide risk pool, with actuarial premiums (those paid by the corp to the
+    medical liaison or drug retailers) ?
+    Perhaps emphasize the non-profit aspect, as that seems the sole noteworthy
+    distinction.
+(74): "cannot" -> "could not". needs past tense
+(75): "prejudice": what kind? 
+    perhaps clarify whether you refer to that of class, race, financial means?
+    also what about people with pre-existing conditions. there was little
+    mention of that, and I hear it's a popular counter to health-care reform
+    proposals (specifically those targeting "prejudice").

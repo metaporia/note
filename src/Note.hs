@@ -386,7 +386,6 @@ derefAbbrNS :: (VMVal c, HashAlg alg)
 derefAbbrNS abbr = state $ 
     \n@(Note lnk vm ab sm) -> ((lengthen ab abbr) >>= deref vm, n)
 
-
 cmds :: (Ord k, IsString k, VMVal c, HashAlg alg) =>  M.Map k (T.Text -> State (Note alg c) (Maybe c))
 cmds = M.fromList [ ("deref", derefAbbrNS) ] -- add number of arguments expected to tuple (threeple, rly).
 
