@@ -44,6 +44,7 @@ dependencies:
 - haskeline
 - process
 - checkers
+- pretty-show
 library:
   source-dirs: 
       - src
@@ -64,6 +65,8 @@ library:
       - Abbrev
       - Parse
   other-modules: []
+  ghc-options: []
+
 
 executables:
   note-tui:

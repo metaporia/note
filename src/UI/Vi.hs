@@ -15,7 +15,7 @@ Provides:
 {-# LANGUAGE ScopedTypeVariables #-}
 module UI.Vi where
 
-import Prelude hiding (insert, lookup, init)
+import Prelude hiding (lookup, init)
 
 import Crypto.Hash
 import Text.RawString.QQ
@@ -109,6 +109,17 @@ posnToIdx' pt s (CursorPosn row col)
                                        End -> col)
                 else Nothing
 
+selToPosn :: T.Text -> Selection -> CursorPosn
+selToPosn = undefined
+
+posnToSel :: T.Text -- ^ background blob contents
+          -> CursorPosn  -- ^ start of sel
+          -> CursorPosn  -- ^ end of sel
+          -> Maybe Selection
+posnToSel t s e = Sel <$> (posnToIdx' Start t s)
+                      <*> (posnToIdx' End t e)
+
+
 selLine :: Int -> Int -> Int -> (CursorPosn, CursorPosn)
 selLine row colS colE = (CursorPosn row colS, CursorPosn row colE)
 
@@ -124,3 +135,8 @@ fromViSel = undefined
 toViSel :: VMap alg c -> Key alg -> Selection -> ViSel
 toViSel = undefined
 
+
+-- verify that 
+-- @
+-- idx = cursorToIdx' cur
+-- cur == 

@@ -136,6 +136,7 @@ instance Splittable T.Text where
 
 
 class Splittable a => Selectable a where
+    {-# MINIMAL sel #-}
     sel :: a -> Selection -> (a, a, a)
 
 getPre :: (a, a, a) -> a

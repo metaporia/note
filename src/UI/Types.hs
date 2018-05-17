@@ -62,7 +62,7 @@ import Link hiding (pointsTo, isPointedToBy)
 import qualified Link as Lnk
 import qualified VMap as VM
 import VMap
-import qualified Abbrev
+import qualified Abbrev as A
 import Abbrev hiding (alias)
 import Helpers 
 import Val
@@ -242,7 +242,7 @@ link st st' = do
     s <- liftEither $ getAbbr st
     o <- liftEither $ getAbbr st'
     let lengthen' a = liftEither $ 
-            case lengthen abbr a of 
+            case A.lengthen abbr a of 
               Just k -> Right k 
               Nothing -> Left "no key matching abbr found"
     st <- lengthen' s
@@ -261,7 +261,7 @@ derefAbbr :: ST -> NoteS String ST
 derefAbbr st = do
     n@(Note lnk vm abbr sm) <- get
     alias' <- liftEither $ getAbbr st
-    k <- liftEither $ case lengthen abbr alias' of
+    k <- liftEither $ case A.lengthen abbr alias' of
                        Just k -> Right k
                        Nothing -> Left "abbr not found in Abbrev"
     val <- liftEither $ 
@@ -343,7 +343,7 @@ isPointedToBy st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     obj <- liftEither $ 
-        case lengthen (getAbbrev note) abbr of
+        case A.lengthen (getAbbrev note) abbr of
           Just k -> Right $ Obj k
           Nothing -> Left "could not find key matching abbr"
     let subjs =  Lnk.isPointedToBy (getLinks note) obj
@@ -366,7 +366,7 @@ pointsTo st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     subj <- liftEither $ 
-        case lengthen (getAbbrev note) abbr of
+        case A.lengthen (getAbbrev note) abbr of
           Just k -> Right $ Subj k
           Nothing -> Left "could not find key matching abbr"
     let objs =  Lnk.pointsTo (getLinks note) subj
@@ -408,9 +408,9 @@ select st st' = do
     a <- liftEither $ getAbbr st
     sel <- liftEither $ getSel' st'
     sourceKey <- liftEither $
-        case lengthen abbr a of
+        case A.lengthen abbr a of
           Just k -> Right k
-          Nothing -> Left "could not lengthen key"
+          Nothing -> Left "could not A.lengthen key"
     (vm', spanKey) <- liftEither $ 
         case insertRawSpan sourceKey sel vm of
           Just (vm', spanKey) -> Right (vm', spanKey) 
@@ -485,7 +485,6 @@ getArgs (Cmd _ args) = args
 
 
 instance ToJSON Cmd where
-
     toJSON (Cmd cmd args) = object [ "type" .= String "command" 
                                    , "name" .= String cmd
                                    , "args" .= toJSON args

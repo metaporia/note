@@ -12,8 +12,8 @@ import qualified Data.Map as M
 import Crypto.Hash --(SHA1, hash, hashWith)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 (pack)
-import Data.ByteArray (ByteArrayAccess)
-import Data.ByteString.Conversion
+import Data.ByteArray() 
+import Data.ByteString.Conversion()
 --import Content
 import qualified Data.Text as T 
 import qualified Data.Text.IO as TIO
@@ -42,7 +42,7 @@ import qualified Note
 import UI.Types (NoteS, runWith', keyToText, derefAbbr)
 import UI.Vi
 import Abbrev 
-import VMap hiding (deref)
+import VMap hiding (deref, getSpansOf)
 import qualified VMap as VM
 import Link hiding (pointsTo, isPointedToBy)
 import qualified Link as Lnk
@@ -183,9 +183,10 @@ lookup t = lengthen' t >>= lookupK
 lengthen' :: T.Text -> NoteS String (Key SHA1)
 lengthen' a = do
     n <- get
-    k <- liftEither $ case lengthen (getAbbrev n) a of
-                        Just k  -> Right k
-                        Nothing -> Left "no key assoc'd w given abbr"
+    k <- liftEither $ 
+        case lengthen (getAbbrev n) a of
+          Just k  -> Right k
+          Nothing -> Left "no key assoc'd w given abbr"
     put n
     return k
 
@@ -321,8 +322,8 @@ pointsToK key = do
     return $ map (\(Obj k) -> k) objs
 
 -- | Applies 'select' to 'Key's.
-selectK :: Key SHA1 -> Selection -> NoteS String (Key SHA1)
-selectK sourceKey sel = do
+selectK :: Selection -> Key SHA1 -> NoteS String (Key SHA1)
+selectK sel sourceKey = do
     (Note lnk vm abbr sm) <- get
     (vm', spanKey) <- liftEither $ 
         case insertRawSpan sourceKey sel vm of
@@ -334,8 +335,8 @@ selectK sourceKey sel = do
 
 -- | Apply, and register, a 'Selection' to the 'Val' of the 'Key' of the
 -- given abbreviation, @a :: T.Text@. 
-select :: T.Text -> Selection -> NoteS String (Key SHA1)
-select a sel  = do
+select :: Selection -> T.Text -> NoteS String (Key SHA1)
+select sel a  = do
     (Note lnk vm abbr sm) <- get
     sourceKey <- liftEither $
         case lengthen abbr a of
@@ -361,6 +362,14 @@ selectPosn a s e = do
     let convert pt' x = liftEither $ case cursorToIdx' vm sourceKey pt' x of
                           Just i -> Right i
                           Nothing -> Left "unable to convert 'CursorPosn' to 'Int'"
-    s' <- convert Start s
+    s'' <- convert Start s
     e' <- convert End e
-    selectK sourceKey (Sel s' e')
+    selectK (Sel s'' e') sourceKey 
+
+getSpansOfK :: Key SHA1 -- ^ bg blob
+            -> NoteS String [Key SHA1] -- ^ spans on bg blob
+getSpansOfK k = do
+    n <- get
+    ks <- liftEither $ VM.getSpansOf (getSelVMap n) k
+    return ks
+

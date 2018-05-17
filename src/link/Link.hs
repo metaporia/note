@@ -115,12 +115,14 @@ instance Linker Links alg where
     type Subject alg = Subj alg
     type Object alg = Obj alg
 
+    -- | What does @subj@ point at?
     pointsTo :: Links alg -> Subject alg -> [Object alg]
     pointsTo (Links to _) subj =
         case M.lookup subj to of
           Just objs -> objs
           Nothing -> []
 
+    -- | What points at @obj@?
     isPointedToBy :: Links alg -> Object alg -> [Subject alg]
     isPointedToBy (Links _ from) obj =
         case M.lookup obj from of

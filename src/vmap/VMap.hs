@@ -19,6 +19,7 @@ module VMap ( VMap
             , registerSpanInsertion
             , pprintSVM
             , locateIdx
+            , getSpansOf
             ) where
 
 -- TODO:
@@ -160,8 +161,7 @@ insertRawSpan k s (VMap m) = do
     return (m' m, k')
 
 
--- SelVMap
-
+-- |  list of span 'Key's to a 
 newtype SelVMap alg = 
     SelVMap { getSelVMap :: M.Map (Key alg) [Key alg] } deriving (Eq, Show)
 
@@ -191,6 +191,17 @@ registerSpanInsertion spanKey sourceKey s (SelVMap m) =
       Just xs -> SelVMap $  M.insert sourceKey (spanKey:xs) m
       Nothing -> SelVMap $ M.insert sourceKey [spanKey] m
 
+
+-- | Fetch the list of span keys whose 'Selection' applies to the given
+-- source 'key'
+getSpansOf :: (HashAlg alg) 
+           => SelVMap alg
+           -> Key alg -- ^ source 'Key'
+           -> Either String [Key alg] -- ^ list of span 'Key's
+getSpansOf (SelVMap m) k =
+    case M.lookup k m of
+      Just ks -> Right ks
+      Nothing -> Left "no spans select from the given source key"
 
 
 -- | Given the 'Key' of some 'Blob' and an index, return a list of keys sorted

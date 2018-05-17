@@ -2,25 +2,31 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Parse where
 
+import Prelude hiding (lookup)
+
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Text.RawString.QQ
 import qualified Data.Text.Lazy as TL
-import Text.Trifecta hiding (rendered, render, Rendering)
+import Text.Trifecta hiding (rendered, render, Rendering, Span)
 import Control.Applicative
 import Data.Monoid ((<>))
 import Data.Bifunctor
 
 import Control.Monad.Except
-
+import Control.Monad.State.Class
 import Lib
-import Select (Selection(..))
+
+import Data.Maybe (maybe)
+
+import Text.Show.Pretty
 
 import Helpers
 import Crypto.Hash
 import Val
 import Select
 import UI.Types (NoteS(..))
+import Select (Selection(..))
 
 
 -- '*.note' format: 
@@ -188,13 +194,16 @@ r0 = [ ( "sparked enormous controversy over the price hike.  People, outraged, a
 
 -- this intermediate format which can be directly rendered, serialized (to
 -- JSON?) or loaded into program state, viz. 'NoteS'.
-r1 = [ ( "sparked enormous controversy over the price hike.  People, outraged, argued", [Partial 69 75 '`'])
-     , ( "disavowed any moral obligation to lower prices, and claim R&D efforts will",  [Partial 52 57 '<'])]
+r1 = [ ( "sparked enormous controversy over the price hike.  People, outraged, \
+         \argued", [Partial 69 75 '`'])
+
+     , ( "disavowed any moral obligation to lower prices, and claim R&D efforts\
+         \ will",  [Partial 52 57 '<'])]
 
 sr = fst $ r0 !! 0
 sr' = fst  $ r0 !! 2
 
-r3 = loadK sr  >>= (\k -> selectK k (Sel 69 75)) 
+r3 = loadK sr  >>= selectK (Sel 69 75)
      -- >> loadK sr' >>= (\k -> selectK k (Sel 52 57)) 
      >>= lookupK
      >>= liftEither . fromSpan
@@ -204,7 +213,8 @@ r3 = loadK sr  >>= (\k -> selectK k (Sel 69 75))
 data LineTag = 
      Partial Int Int Char -- ^ @Partial sIdx eIxd c@ describes a single partial span (1 ln).
    | Whole Char -- ^ a whole line selection, which may have fellows ('LineTag's w the same 'Char')
-   | RenderedLine
+   | None
+--   | RenderedLine -- ^ marks line as visual metadata
    deriving (Eq, Show)
 
 rend :: T.Text
@@ -224,7 +234,7 @@ conv0 = [ ("hello world", "p^" )
 conv1 :: [(T.Text, [LineTag])]
 conv1 = [ ("hello world", [Partial 6 11 '^'])]
 
-conv2 = loadK "hello world" >>= \k -> selectK k (Sel 6 11)
+conv2 = loadK "hello world" >>= selectK (Sel 6 11)
 -- and back again
 undoConv2 = conv2 
         >>= lookupK 
@@ -233,14 +243,227 @@ undoConv2 = conv2
         >>= (\(k, ps) -> do val <- derefK k
                             return (val, ps))
 
-newtype Rendering = Rendering { getRend :: [(T.Text, [LineTag])] } deriving (Eq, Show)
+newtype Rendering 
+  = Rendering { getRend :: [(T.Text, [LineTag])] } deriving (Eq, Show)
 
--- | Takes a 'Key' to a 'Blob' and converts the assoc'd 'Blob' to a Rendering.
+newtype BareRendering
+  = BareRendering { getBareRend :: [T.Text] } deriving (Eq, Show)
+
+-- | Add empty list for 'LineTag's to each line of 'Text'.
+fromBareRendering :: BareRendering -> Rendering
+fromBareRendering = Rendering 
+                  . flip zip (repeat []) 
+                  . getBareRend
+
+-- | Convert 'Key' into 'Rendering'.
 intoRendering :: Key SHA1 -> NoteS String Rendering
-intoRendering = undefined
+intoRendering = fmap fromBareRendering . intoBareRendering 
 
--- | Apply 'Selection' to 'Rendering'.
-applySelection :: Selection -> Rendering -> Rendering
-applySelection = undefined
+-- | Takes a 'Key' to a 'Blob' and converts the assoc'd 'Blob' to a 
+-- BareRendering.
+intoBareRendering :: Key SHA1 -> NoteS String BareRendering
+intoBareRendering = fmap bareRenderBlob . derefK
 
+bareRenderBlob :: T.Text -> BareRendering
+bareRenderBlob = BareRendering . T.lines
+
+-- | NB: still only attempting to render single linetags
+tagLines :: Rendering -> Selection -> IO Rendering
+tagLines (Rendering r) = fmap Rendering . go r
+    where go :: [(T.Text, [LineTag])] -> Selection -> IO [(T.Text, [LineTag])]
+          go [] _ = return []
+          go ((t, tags):rest) s@(Sel q e)  = 
+              do let s' = (pruneSel s (len t))
+                 r <- go rest s'
+                 case classifySel s (len t) of
+                   Mid -> return $ (t, Partial q e '^':tags) : r
+                   _   -> return $ (t, []) : r
+          -- this case is unused, as it is only ever called on bareRenderings
+          --go ((t, (ln:lns)):rest) s = do let s' = (pruneSel s (len t))
+          --                               r <- go rest  s'
+          --                               return $ (t, [ln]) : r
+
+
+-- Determines, given 'Selection' @s@ and an a 'Blob''s content @c@'s length @l@, what kind of selection 
+-- @sel c s@ would generate.
+classifySel :: Selection 
+            -> Int -- ^ Blob length
+            -> SelType
+classifySel (Sel s e) l
+  | l == 0 = EmptyBlob
+  | lt (0, s, l) && lt (s, e, l) = Mid
+  | s == 0 && lt (s, e, l) = Left'
+  | s > l && s == e = EmptyPlus
+  | s == e && e == 0 = EmptyLeft
+  | s == e && s < l = EmptyMid
+  | s == e && e == l = EmptyRight
+  | s == 0 && e == l = WholeExact
+  | s == 0 && e > l = WholePlus
+  | lt (0, s, l) && e == l = RightExact
+  | lt (0, s, l) && e > l = RightPlus
+  | lt (s, e, 0) = Before
+  | lt (l, s, e) = After
+
+lt :: Ord c => (c, c, c) -> Bool
+lt (x, y, z) = x < y && y < z
+
+gt :: Ord c => (c, c, c) -> Bool
+gt (x, y, z) = x > y && y > z
+
+
+data SelType = Left'
+             | EmptyBlob
+             | RightPlus
+             | RightExact
+             | WholePlus
+             | WholeExact
+             | EmptyLeft
+             | EmptyMid
+             | EmptyRight
+             | EmptyPlus
+             | Mid
+             | Before
+             | After
+             deriving (Eq, Show)
+-- | Meant for use when generating id specific 'Selection's, 'pruneSel'
+-- decrements the sIdx and eIdx vals of thhe given 'Selection' by the given
+-- amount. If the subtraction results in an n<0 then n = 0.
+pruneSel :: Selection 
+         -> Int -- ^ length of last chunk
+         -> Selection
+pruneSel sel@(Sel s e) len = 
+    let s' = nat (s - len)
+        e' = nat (e - len)
+        nat n = if n < 0 then 0 else n
+     in Sel s' e'
+
+
+s :: T.Text
+s = [r|From a humble $13.50, to a gargantuan $750, the price of a life saving drug
+skyrocketed overnight [1].  Daraprim, as a drug that treats toxoplasmosis,
+sparked enormous controversy over the price hike.  People, outraged, argued
+there is ethical obligation to lower drug prices.  Companies in return disavowed 
+any moral obligation to lower prices, and claim R&D efforts will result in more 
+life saving medications [2].
+|]
+
+s1 = Sel 7 13  
+
+xx = loadK s                  >>= aliasK "bg"
+ >>= select s1                >>= aliasK "humble"
+ >> select (Sel 27 37) "bg"   >>= aliasK "gargantuan"
+ >> select (Sel 48 63) "bg"   >>= aliasK "price"
+ >> loadK "second commentary" >>= aliasK "c2"
+ >> loadK "my commentary"     >>= aliasK "c1"
+ >> link "c1" "humble"
+ >> link "c2" "gargantuan"
+ >> link "c1" "price"
+ >> lengthen' "bg" 
+
+ret = do e <- go $ xx >>= renderSpansOf 
+         let (r, n) = fromRight e
+         pPrint r
+         T.putStrLn $ render r
+
+rend2 = fromBareRendering $ bareRenderBlob s
+
+
+maybeE :: err ->  Maybe a -> Either err a
+maybeE  _   (Just a) = Right a
+maybeE  err _        = Left err
+
+liftE = liftEither
+
+renderFirstSpanOf :: Key SHA1 -> NoteS String Rendering
+renderFirstSpanOf k = do
+    ks <- getSpansOfK k 
+    -- fetch first span whose sourcekey is k
+    k' <- liftE $ case null ks of
+                        True -> Left "no comments on k"
+                        False -> Right $ ks !! 0
+    val <- lookupK k' -- is such a partial patten safe?
+    (_, s) <- liftE . fromSpan $ val                
+    r <- intoRendering k  
+    tagLines' r s
+
+-- | Lookup all the selections that have the given 'Key' as a sourcekey.
+getSelections :: Key SHA1 -> NoteS String [Selection]
+getSelections = getSpansOfK 
+       >=> sequence 
+         . map (lookupK >=> liftE 
+                          . fmap snd 
+                          . fromSpan)
+
+-- | Rendere all spans which address the given 'Key'.
+renderSpansOf :: Key SHA1 -> NoteS String Rendering
+renderSpansOf k = do n <- get
+                     sels <- getSelections k
+                     foldr (\s n -> n >>= flip tagLines' s)
+                           (intoRendering k)
+                           sels
+   
+tagLines' :: Rendering -> Selection -> NoteS String Rendering
+tagLines' = (liftIO .) . tagLines
+
+-- | this just extracts the original derefed content. add higlight line
+-- rendering.
+render :: Rendering -> T.Text
+render  = T.unlines . map (uncurry renderLineTags) . getRend
+
+render' :: Rendering -> T.Text
+render' = T.unlines . map (uncurry renderLineTags') . getRend
+
+renderLineTags' :: T.Text -> [LineTag] -> T.Text
+renderLineTags' t [] = t
+renderLineTags' t (x:xs) = undefined
+
+renderblob = render . fromBareRendering . bareRenderBlob 
+
+f :: (T.Text, [LineTag]) -> T.Text
+f (t, []) = t
+f (t, lns) = undefined
+
+
+-- | Only renders /first/ 'LineTag'.
+renderLineTags :: T.Text -> [LineTag] -> T.Text
+renderLineTags t [] = t
+renderLineTags t (x:xs) = 
+    let cat = (\(ln, hi) -> ln <> "\n" <> hi) 
+        base = renderLineTag' t x
+     in cat $ foldl renderLineTag base xs
+
+text' :: T.Text
+text' =  "From a humble $13.50, to a gargantuan $750, the price of a life saving drug"
+linetags =  [Partial 27 37 '^' , Partial 7 13 '^' ]
+
+
+-- | Performs all but the first 'LineTag' application.
+renderLineTag :: (T.Text, T.Text) -> LineTag -> (T.Text, T.Text) 
+renderLineTag (c, hi) (Partial s e chr) =
+    let l = len c
+        (x, y, z) = sel hi (Sel s e)
+        hi' = x
+           <> T.map (const chr) y
+           <> z
+     in (c, hi')
+
+
+-- | Preforms first 'LineTag' application.
+renderLineTag' :: T.Text-> LineTag -> (T.Text, T.Text)
+renderLineTag' content (Partial s e c) = 
+    let lt = T.length content
+        (x, y, z) = sel (T.replicate lt " ") (Sel s e)
+        highlight' = x 
+                  <> T.map (const  c) y 
+                  <> z 
+     in (content, highlight')
+renderLineTag' t _ = (t, T.empty)
+--renderLineTag (t, _) (Whole _) = (t, T.empty) -- TODO: padleft w idchar
+--renderLineTag (t, _) None = (t, T.empty)
+-- add None case
+
+lineTagToSel :: LineTag -> Either String Selection
+lineTagToSel (Partial s e _) = Right $ Sel s e
+lineTagToSel (Whole c) = Left "expected 'LineTag' variant 'Partial', found 'Whole'."
+lineTagToSel None = Left "expected 'LineTag' variant 'Partial', found 'None'."
 
