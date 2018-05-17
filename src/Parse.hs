@@ -224,7 +224,7 @@ hello world | PartialSel '^'
 |]
 
 
-leftPadding = 17
+leftPadding = 2
 
 -- there
 conv0 :: [(T.Text, T.Text)]
@@ -267,6 +267,9 @@ intoBareRendering = fmap bareRenderBlob . derefK
 bareRenderBlob :: T.Text -> BareRendering
 bareRenderBlob = BareRendering . T.lines
 
+blobRender :: T.Text -> Rendering
+blobRender = fromBareRendering . bareRenderBlob
+
 -- | NB: still only attempting to render single linetags
 tagLines :: Rendering -> Selection -> IO Rendering
 tagLines (Rendering r) = fmap Rendering . go r
@@ -274,15 +277,24 @@ tagLines (Rendering r) = fmap Rendering . go r
           go [] _ = return []
           go ((t, tags):rest) s@(Sel q e)  = 
               do let s' = (pruneSel s (len t))
+                 let classified = flip classifySel (len t) . Sel q . min e $ len t
+                 --putStrLn $ ppShow classified
                  r <- go rest s'
-                 case classifySel s (len t) of
-                   Mid -> return $ (t, Partial q e '^':tags) : r
+                 case classified of
+                   Mid -> return $ (t, Partial q e '^':tags)  :r
+                   Left' -> return $ (t, Partial q e '`':tags) :r
+                   WholeExact -> return $ (t, Whole '#':tags) :r
                    _   -> return $ (t, []) : r
+
           -- this case is unused, as it is only ever called on bareRenderings
           --go ((t, (ln:lns)):rest) s = do let s' = (pruneSel s (len t))
           --                               r <- go rest  s'
           --                               return $ (t, [ln]) : r
 
+
+blob = blobRender s
+mlSel = Sel 76 151
+huh = tagLines blob mlSel >>= pPrint
 
 -- Determines, given 'Selection' @s@ and an a 'Blob''s content @c@'s length @l@, what kind of selection 
 -- @sel c s@ would generate.
@@ -352,7 +364,7 @@ s1 = Sel 7 13
 xx = loadK s                  >>= aliasK "bg"
  >>= select s1                >>= aliasK "humble"
  >> select (Sel 27 37) "bg"   >>= aliasK "gargantuan"
- >> select (Sel 48 63) "bg"   >>= aliasK "price"
+ >> select (Sel 75 149) "bg"   >>= aliasK "price"
  >> loadK "second commentary" >>= aliasK "c2"
  >> loadK "my commentary"     >>= aliasK "c1"
  >> link "c1" "humble"
@@ -410,60 +422,59 @@ tagLines' = (liftIO .) . tagLines
 render :: Rendering -> T.Text
 render  = T.unlines . map (uncurry renderLineTags) . getRend
 
-render' :: Rendering -> T.Text
-render' = T.unlines . map (uncurry renderLineTags') . getRend
+-- | Text args should be one line each.
+padLeft :: Int -- ^ how much padding?
+        -> T.Text -- ^ text to the left of '|'
+        -> T.Text -- ^ tetx to the right of '|'
+        -> T.Text
+padLeft n l r = makeOfLengthN n l <> " | " <> r
+    where makeOfLengthN n t 
+            | lt >= n = T.take n t
+            | lt < n  = (T.replicate (n - lt) " ") <> l
+            where lt = len t
 
-renderLineTags' :: T.Text -> [LineTag] -> T.Text
-renderLineTags' t [] = t
-renderLineTags' t (x:xs) = undefined
-
-renderblob = render . fromBareRendering . bareRenderBlob 
-
-f :: (T.Text, [LineTag]) -> T.Text
-f (t, []) = t
-f (t, lns) = undefined
 
 
 -- | Only renders /first/ 'LineTag'.
 renderLineTags :: T.Text -> [LineTag] -> T.Text
-renderLineTags t [] = t
+renderLineTags t [] = padLeft leftPadding "" t
 renderLineTags t (x:xs) = 
-    let cat = (\(ln, hi) -> ln <> "\n" <> hi) 
+    let lp = leftPadding
+        checkHiLine h = case not $ T.null h of
+                          True -> "\n " <>  padLeft lp "" h
+                          False -> ""
+        cat = (\(ln, hi, signs) -> padLeft lp signs ln <> checkHiLine hi) 
         base = renderLineTag' t x
      in cat $ foldl renderLineTag base xs
 
 text' :: T.Text
 text' =  "From a humble $13.50, to a gargantuan $750, the price of a life saving drug"
-linetags =  [Partial 27 37 '^' , Partial 7 13 '^' ]
+linetags =  [Partial 27 37 '^' , Partial 7 13 '#' ]
 
+-- 'ware: Helpers below
 
 -- | Performs all but the first 'LineTag' application.
-renderLineTag :: (T.Text, T.Text) -> LineTag -> (T.Text, T.Text) 
-renderLineTag (c, hi) (Partial s e chr) =
+renderLineTag :: (T.Text, T.Text, T.Text) -- ^ in order: (content, higlights, gutter signs)
+              -> LineTag -> (T.Text, T.Text, T.Text) 
+renderLineTag (c, hi, signs) (Partial s e chr) =
     let l = len c
         (x, y, z) = sel hi (Sel s e)
         hi' = x
            <> T.map (const chr) y
            <> z
-     in (c, hi')
+        in (c, hi', signs <> T.pack ('p':[chr]))
+renderLineTag (c, hi, signs) (Whole chr) = (c, hi, signs <> T.pack [chr])
+        
 
 
 -- | Preforms first 'LineTag' application.
-renderLineTag' :: T.Text-> LineTag -> (T.Text, T.Text)
+renderLineTag' :: T.Text-> LineTag -> (T.Text, T.Text, T.Text)
 renderLineTag' content (Partial s e c) = 
     let lt = T.length content
         (x, y, z) = sel (T.replicate lt " ") (Sel s e)
         highlight' = x 
                   <> T.map (const  c) y 
                   <> z 
-     in (content, highlight')
-renderLineTag' t _ = (t, T.empty)
---renderLineTag (t, _) (Whole _) = (t, T.empty) -- TODO: padleft w idchar
---renderLineTag (t, _) None = (t, T.empty)
--- add None case
-
-lineTagToSel :: LineTag -> Either String Selection
-lineTagToSel (Partial s e _) = Right $ Sel s e
-lineTagToSel (Whole c) = Left "expected 'LineTag' variant 'Partial', found 'Whole'."
-lineTagToSel None = Left "expected 'LineTag' variant 'Partial', found 'None'."
-
+     in (content, highlight', "")
+renderLineTag' t (Whole chr) = (t, T.empty, T.pack [chr])
+renderLineTag' t _ = (t, T.empty, T.empty)
