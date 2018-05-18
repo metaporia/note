@@ -279,8 +279,10 @@ tagLines (Rendering r) = fmap Rendering . go r
           go [] _ = return []
           go ((t, tags):rest) s@(Sel q e)  = 
               do let s' = (pruneSel s (len t))
+                 pPrint (s, len t)
+                 -- TODO remove use of min, which makes this all so brittle.
                  let classified = flip classifySel (len t) . Sel q . min e $ len t
-                 --putStrLn $ ppShow (classified, s, len t)
+                 putStrLn $ ppShow (classified, s, len t)
                  cur <- case classified of
                                Mid -> return (t, Partial q e '^':tags)
                                Left' -> return (t, Partial q e '#':tags)
@@ -302,6 +304,9 @@ huh = tagLines blob mlSel >>= pPrint
 
 -- Determines, given 'Selection' @s@ and an a 'Blob''s content @c@'s length @l@, what kind of selection 
 -- @sel c s@ would generate.
+--
+-- NB: classifies a 'Selection' of a blob whose length is /greater/ than
+-- @'eIdx' sel@.
 classifySel :: Selection 
             -> Int -- ^ Blob length
             -> SelType
@@ -319,6 +324,14 @@ classifySel (Sel s e) l
   | lt (0, s, l) && e > l = RightPlus
   | lt (s, e, 0) = Before
   | lt (l, s, e) = After
+  | otherwise = Unclassified
+
+-- TODO: replace 'classifySel' w 'classifySelOfLine' in 'tagLines'
+-- classify a sel on a blob wrt to a given line
+classifyBlobSelWRTLine :: Selection -- ^ sel wrt to bg blob
+                       -> Int -- ^ length of line
+                       -> SelType -- ^ type of sel /for the line/
+classifyBlobSelWRTLine = undefined
 
 lt :: Ord c => (c, c, c) -> Bool
 lt (x, y, z) = x < y && y < z
@@ -340,6 +353,7 @@ data SelType = Left'
              | Mid
              | Before
              | After
+             | Unclassified
              deriving (Eq, Show)
 -- | Meant for use when generating id specific 'Selection's, 'pruneSel'
 -- decrements the sIdx and eIdx vals of thhe given 'Selection' by the given
@@ -379,20 +393,28 @@ xx = loadK s                  >>= aliasK "bg"
  >> link "humble" "new"
  >> lengthen' "bg" 
 
+xy = loadf "mock/specificity.md" >>= aliasK "spec"
+  >> loadK "eureka!"             >>= aliasK "resp"
+  >> select (Sel 50 1000) "spec" >>= aliasK "selection"
+  >> link "resp" "selection"
+  >> select (Sel 105 130) "spec"   >>= aliasK "selection2"
+  >> link "resp" "selection2"
+  >> lengthen' "spec"
+
 ret' n = do e <- go n
             let (r, n) = fromRight e
             pPrint r
             --T.putStrLn $ render r
 
-ret = do e <- go xx
-         let (k, n) = fromRight e
-         e' <- go $ do r <- xx >>= intoRendering
+ret n=do e <- go n
+         let (k, n') = fromRight e
+         e' <- go $ do r <- n >>= intoRendering
                        sels <- getSelections k
                        liftIO $ pPrint sels
                        r <-  renderSpansOf' sels r
                        liftIO $ pPrint r
                        return r
-         let (r, n') = fromRight e'
+         let (r, n'') = fromRight e'
          putStrLn ""
          T.putStrLn $ render r
 
@@ -461,7 +483,7 @@ padLeft :: Int -- ^ how much padding?
         -> T.Text -- ^ text to the left of '|'
         -> T.Text -- ^ tetx to the right of '|'
         -> T.Text
-padLeft n l r = makeOfLengthN n l <> " | " <> r
+padLeft n l r = makeOfLengthN n l <> "| " <> r
     where makeOfLengthN n t 
             | lt >= n = T.take n t
             | lt < n  = (T.replicate (n - lt) " ") <> l

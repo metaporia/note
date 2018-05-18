@@ -208,11 +208,17 @@ deref abbr = do
 link :: T.Text -> T.Text -> NoteS String ()
 link s o = do
     n@(Note lnk vm abbr sm) <- get
-    st <- liftEither $ maybeToEither $ lengthen abbr s
-    ot <- liftEither $ maybeToEither $ lengthen abbr o
+    st <- lengthenToEither abbr s
+    ot <- lengthenToEither abbr o
     let lnkr' = Link.insert (Subj st) (Obj ot) lnk
     put (Note lnkr' vm abbr sm)
     return ()
+
+lengthenToEither :: ShortKeys SHA1 T.Text -> T.Text -> NoteS String (Key SHA1)
+lengthenToEither abbr x = liftEither $
+    case lengthen abbr x of
+      Just y -> Right y 
+      Nothing -> Left "abbr not found in Abbrev"
 
 -- | Creat a new 'Val' from a 'FilePath'.
 loadf :: FilePath -> NoteS String (Key SHA1)
