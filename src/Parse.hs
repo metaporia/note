@@ -283,7 +283,7 @@ tagLines (Rendering r) = fmap Rendering . go r
                  --putStrLn $ ppShow (classified, s, len t)
                  cur <- case classified of
                                Mid -> return (t, Partial q e '^':tags)
-                               Left' -> return (t, Partial q e '`':tags)
+                               Left' -> return (t, Partial q e '#':tags)
                                WholeExact -> print "here" >> return (t, Whole '#':tags)
                                _   -> return (t, tags)
                  ([cur] <>) <$> go rest s'
@@ -369,7 +369,7 @@ xx = loadK s                  >>= aliasK "bg"
  >>= select (Sel 7 13)        >>= aliasK "humble"
  >> select (Sel 1 4) "bg"     >>= aliasK "new"
  >> select (Sel 27 37) "bg"   >>= aliasK "gargantuan"
- >> select (Sel 75 149) "bg"  >>= aliasK "price"
+ >> select (Sel 75 170) "bg"  >>= aliasK "price"
  >> loadK "second commentary" >>= aliasK "c2"
  >> loadK "my commentary"     >>= aliasK "c1"
 
@@ -509,6 +509,6 @@ renderLineTag' content (Partial s e c) =
         highlight' = x 
                   <> T.map (const  c) y 
                   <> z 
-     in (content, highlight', "")
+     in (content, highlight', T.pack [c])
 renderLineTag' t (Whole chr) = (t, T.empty, T.pack [chr])
 renderLineTag' t _ = (t, T.empty, T.empty)

@@ -28,6 +28,7 @@ import qualified UI.Types as T
 import Note (note')
 
 import UI.REPL (parse, pCmd)
+import Parse (ret)
 
 type Cmd' = T.Cmd
 
@@ -110,8 +111,9 @@ theApp =
           , appAttrMap = const theMap
           }
 
-main :: IO ()
-main = do
+main = ret
+main'' :: IO ()
+main'' = do
     st <- defaultMain theApp initialState
     putStrLn "In input 1 you entered:\n"
     putStrLn $ unlines $ getEditContents $ st^.cmd
