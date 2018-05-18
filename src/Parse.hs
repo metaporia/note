@@ -224,7 +224,7 @@ hello world | PartialSel '^'
 |]
 
 
-leftPadding = 2
+leftPadding = 5
 
 -- there
 conv0 :: [(T.Text, T.Text)]
@@ -270,6 +270,8 @@ bareRenderBlob = BareRendering . T.lines
 blobRender :: T.Text -> Rendering
 blobRender = fromBareRendering . bareRenderBlob
 
+
+--- WTF!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! TODO: fix
 -- | NB: still only attempting to render single linetags
 tagLines :: Rendering -> Selection -> IO Rendering
 tagLines (Rendering r) = fmap Rendering . go r
@@ -278,13 +280,15 @@ tagLines (Rendering r) = fmap Rendering . go r
           go ((t, tags):rest) s@(Sel q e)  = 
               do let s' = (pruneSel s (len t))
                  let classified = flip classifySel (len t) . Sel q . min e $ len t
-                 --putStrLn $ ppShow classified
-                 r <- go rest s'
-                 case classified of
-                   Mid -> return $ (t, Partial q e '^':tags)  :r
-                   Left' -> return $ (t, Partial q e '`':tags) :r
-                   WholeExact -> return $ (t, Whole '#':tags) :r
-                   _   -> return $ (t, []) : r
+                 --putStrLn $ ppShow (classified, s, len t)
+                 cur <- case classified of
+                               Mid -> return (t, Partial q e '^':tags)
+                               Left' -> return (t, Partial q e '`':tags)
+                               WholeExact -> print "here" >> return (t, Whole '#':tags)
+                               _   -> return (t, tags)
+                 ([cur] <>) <$> go rest s'
+
+
 
           -- this case is unused, as it is only ever called on bareRenderings
           --go ((t, (ln:lns)):rest) s = do let s' = (pruneSel s (len t))
@@ -362,20 +366,43 @@ life saving medications [2].
 s1 = Sel 7 13  
 
 xx = loadK s                  >>= aliasK "bg"
- >>= select s1                >>= aliasK "humble"
+ >>= select (Sel 7 13)        >>= aliasK "humble"
+ >> select (Sel 1 4) "bg"     >>= aliasK "new"
  >> select (Sel 27 37) "bg"   >>= aliasK "gargantuan"
- >> select (Sel 75 149) "bg"   >>= aliasK "price"
+ >> select (Sel 75 149) "bg"  >>= aliasK "price"
  >> loadK "second commentary" >>= aliasK "c2"
  >> loadK "my commentary"     >>= aliasK "c1"
+
  >> link "c1" "humble"
  >> link "c2" "gargantuan"
- >> link "c1" "price"
+--  >> link "c1" "price"
+ >> link "humble" "new"
  >> lengthen' "bg" 
 
-ret = do e <- go $ xx >>= renderSpansOf 
-         let (r, n) = fromRight e
-         pPrint r
+ret' n = do e <- go n
+            let (r, n) = fromRight e
+            pPrint r
+            --T.putStrLn $ render r
+
+ret = do e <- go xx
+         let (k, n) = fromRight e
+         e' <- go $ do r <- xx >>= intoRendering
+                       sels <- getSelections k
+                       liftIO $ pPrint sels
+                       r <-  renderSpansOf' sels r
+                       liftIO $ pPrint r
+                       return r
+         let (r, n') = fromRight e'
+         putStrLn ""
          T.putStrLn $ render r
+
+sels' = do e <- go $ xx >>= getSelections
+           let (ss, n) = fromRight e
+           e <- go $ xx >>= \k -> fg k ss
+           pPrint . fst $ fromRight e
+           return ()
+
+            
 
 rend2 = fromBareRendering $ bareRenderBlob s
 
@@ -414,6 +441,13 @@ renderSpansOf k = do n <- get
                            (intoRendering k)
                            sels
    
+-- | Rendere all spans which address the given 'Key'.
+renderSpansOf' :: [Selection] -> Rendering -> NoteS String Rendering
+renderSpansOf' [] r = return r
+renderSpansOf' (x:xs) r = tagLines' r  x >>= renderSpansOf' xs 
+   
+fg k sels = foldr (\s n -> n >>= flip tagLines' s) (intoRendering k) sels
+
 tagLines' :: Rendering -> Selection -> NoteS String Rendering
 tagLines' = (liftIO .) . tagLines
 
@@ -440,9 +474,9 @@ renderLineTags :: T.Text -> [LineTag] -> T.Text
 renderLineTags t [] = padLeft leftPadding "" t
 renderLineTags t (x:xs) = 
     let lp = leftPadding
-        checkHiLine h = case not $ T.null h of
-                          True -> "\n " <>  padLeft lp "" h
-                          False -> ""
+        checkHiLine h = if not $ T.null h 
+                          then "\n" <>  padLeft lp "" h
+                          else ""
         cat = (\(ln, hi, signs) -> padLeft lp signs ln <> checkHiLine hi) 
         base = renderLineTag' t x
      in cat $ foldl renderLineTag base xs
@@ -462,7 +496,7 @@ renderLineTag (c, hi, signs) (Partial s e chr) =
         hi' = x
            <> T.map (const chr) y
            <> z
-        in (c, hi', signs <> T.pack ('p':[chr]))
+        in (c, hi', signs <> T.pack [chr])
 renderLineTag (c, hi, signs) (Whole chr) = (c, hi, signs <> T.pack [chr])
         
 
