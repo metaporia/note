@@ -381,7 +381,7 @@ s1 = Sel 7 13
 
 xx = loadK s                  >>= aliasK "bg"
  >>= select (Sel 7 13)        >>= aliasK "humble"
- >> select (Sel 1 4) "bg"     >>= aliasK "new"
+ >> select (Sel 0 4) "bg"     >>= aliasK "new"
  >> select (Sel 27 37) "bg"   >>= aliasK "gargantuan"
  >> select (Sel 75 170) "bg"  >>= aliasK "price"
  >> loadK "second commentary" >>= aliasK "c2"
@@ -391,7 +391,7 @@ xx = loadK s                  >>= aliasK "bg"
  >> link "c2" "gargantuan"
 --  >> link "c1" "price"
  >> link "humble" "new"
- >> lengthen' "bg" 
+ >> lengthen' "bg"
 
 xy = loadf "mock/specificity.md" >>= aliasK "spec"
   >> loadK "eureka!"             >>= aliasK "resp"

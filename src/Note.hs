@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Note where
 
 import Prelude hiding (insert, lookup, init)
@@ -41,6 +42,10 @@ import qualified Data.Binary as BIN
 
 import GHC.Generics
 
+import Lens.Micro
+import Lens.Family.State hiding ((.=))
+import Lens.Micro.TH
+
 import Link
 import qualified VMap as VM
 import VMap
@@ -51,10 +56,10 @@ import Select
 import UI.Vi
 
 data Note alg c = 
-    Note { getLinks :: Links alg 
-         , getVMap :: VMap alg c
-         , getAbbrev :: ShortKeys alg T.Text 
-         , getSelVMap :: SelVMap alg
+    Note { _getLinks :: Links alg 
+         , _getVMap :: VMap alg c
+         , _getAbbrev :: ShortKeys alg T.Text 
+         , _getSelVMap :: SelVMap alg
          } deriving (Eq, Show)
 
 newNote :: Note alg c
@@ -64,11 +69,11 @@ loadNS :: forall alg c. (VMVal c, HashAlg alg)
        => c
        -> StateT (Note alg c) Identity (Maybe (Key alg))
 loadNS c = StateT  $ \note -> 
-    let vm = getVMap note
-        links = getLinks note
-        abbrev = getAbbrev note
+    let vm = _getVMap note
+        links = _getLinks note
+        abbrev = _getAbbrev note
         (mK, vm') = runVState (load c) vm
-     in return (mK, Note links vm' abbrev (getSelVMap note))
+     in return (mK, Note links vm' abbrev (_getSelVMap note))
 
 
 
@@ -78,10 +83,10 @@ linkNS :: forall alg c. (VMVal c, HashAlg alg)
        -> Obj alg
        -> State (Note alg c) ()
 linkNS s o = StateT $ \note ->  
-    let links = getLinks note
+    let links = _getLinks note
         links' = snd $ runState (link s o) links
-        abbrev = getAbbrev note
-     in return ((), Note links' (getVMap note) abbrev (getSelVMap note))
+        abbrev = _getAbbrev note
+     in return ((), Note links' (_getVMap note) abbrev (_getSelVMap note))
 
 link :: (Linker linker alg, Monoid (linker alg))
      => Subject alg
@@ -98,16 +103,16 @@ init state s = runState state s
 
 -- | Pretty-print 'VMap'
 lsvm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
-lsvm = putStrLn . show' . getVMap
+lsvm = putStrLn . show' . _getVMap
 
 lslnk :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
-lslnk = putStrLn . pshow . getLinks
+lslnk = putStrLn . pshow . _getLinks
 
 lssm :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
-lssm  = putStrLn . pprintSVM . getSelVMap
+lssm  = putStrLn . pprintSVM . _getSelVMap
 
 lsabbr :: (VMVal c, HashAlg alg, Show c, Show alg) => Note alg c -> IO ()
-lsabbr  = putStrLn . showShortKeys . getAbbrev
+lsabbr  = putStrLn . showShortKeys . _getAbbrev
 
 
 
@@ -123,7 +128,7 @@ linkAbbrevNS :: forall c. (VMVal c)
              -> T.Text
              -> State (Note SHA1 c) Bool
 linkAbbrevNS s o = state $ \note -> 
-    let abbr = getAbbrev note
+    let abbr = _getAbbrev note
         tup = case (lengthen abbr s, lengthen abbr o) of
                 (Just ks, Just ko) -> Just (ks, ko)
                 (_, _) -> Nothing
@@ -353,9 +358,9 @@ loadThenLink s0 s1 =
                 *> loadNS b2' 
                    ) newNote
 
-vmap = getVMap note
-lnkr = getLinks note
-abbrev'' = getAbbrev note
+vmap = _getVMap note
+lnkr = _getLinks note
+abbrev'' = _getAbbrev note
 ks = appVM M.keys vmap
 k0 = ks !! 0
 k1 = ks !! 1
@@ -369,8 +374,8 @@ k3 = ks !! 3
                     *> locateIdx' k2 4
                     ) note
 
-ks' = appVM M.keys (getVMap note')
-lnkr' = getLinks note'
+ks' = appVM M.keys (_getVMap note')
+lnkr' = _getLinks note'
 
 ls note = lsvm note *> lslnk note *> lssm note
 
@@ -404,4 +409,4 @@ lookupRun cmd abbr note = cmdLookup cmd abbr >>= fst . runWith note
 --                  (args' !! 1)
 --                  (args' !! 2)
 
-
+makeLenses ''Note

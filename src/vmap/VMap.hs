@@ -53,7 +53,8 @@ import Data.Byteable (toBytes, Byteable)
 import Select
 import Helpers (Key)
 
-newtype VMap alg c = VMap { getVVMap :: M.Map (Key alg) (Val alg c) } deriving (Eq)
+newtype VMap alg c = VMap { getVVMap :: M.Map (Key alg) (Val alg c) } 
+    deriving (Eq)
 
 type VMapInternal alg c = M.Map (Key alg) (Val alg c)
 

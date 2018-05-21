@@ -4,3 +4,5 @@ codex.tags
 sesh
 repl.history
 *~
+
+client_session_key.aes

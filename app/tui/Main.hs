@@ -5,6 +5,9 @@ module Main where
 
 import Lens.Micro
 import Lens.Micro.TH
+import Control.Monad.State
+import Control.Monad.Trans.Either
+
 import Graphics.Vty
 
 import Brick.Main
@@ -25,10 +28,14 @@ import qualified Data.Text as T
 import UI.Service
 import UI.Types hiding (Cmd)
 import qualified UI.Types as T
-import Note (note')
+import Note (note', newNote)
+import VMap (VMap, SelVMap)
+import Abbrev 
+import Link
 
 import UI.REPL (parse, pCmd)
 import Parse (ret)
+import Lib
 
 type Cmd' = T.Cmd
 
@@ -44,7 +51,18 @@ data St =
        --, _note :: NoteS String 
        }
 
+data N alg c = 
+    N { _getLinks :: Links alg 
+         , _getVMap :: VMap alg c
+         , _getAbbrev :: ShortKeys alg T.Text 
+         , _getSelVMap :: SelVMap alg
+         } deriving (Eq, Show)
+
 makeLenses ''St
+makeLenses ''N
+
+newtype NoteS' err a = NoteS' { __getNoteS' :: StateT Note' (EitherT err IO) a }
+makeLenses ''NoteS'
 
 drawUI :: St -> [Widget Name]
 drawUI st = [ui]
@@ -111,9 +129,10 @@ theApp =
           , appAttrMap = const theMap
           }
 
-main = ret
-main'' :: IO ()
-main'' = do
+maind = ret
+
+main :: IO ()
+main = do
     st <- defaultMain theApp initialState
     putStrLn "In input 1 you entered:\n"
     putStrLn $ unlines $ getEditContents $ st^.cmd

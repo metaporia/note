@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module UI.Types where
 import Prelude hiding (insert, lookup, init)
 
@@ -53,6 +54,11 @@ import Control.Exception
 import Data.Monoid ((<>))
 
 import GHC.Generics
+
+import Lens.Micro
+import Lens.Family.State hiding ((.=))
+import Lens.Micro.TH
+
 import Text.Printf
 import Data.Char (digitToInt)
 import Data.List.Split (chunksOf)
@@ -72,16 +78,19 @@ import Note hiding (lsvm, lslnk, link)
 
 type Note' = Note SHA1 T.Text
 type ST = ServiceTypes SHA1
+-- TODO add lenses to 'NoteS' et al
 -- transformer ordering case one
-newtype NoteS err a = NoteS { getNoteS :: StateT Note' (EitherT err IO) a }
+newtype NoteS err a = NoteS { _getNoteS :: StateT Note' (EitherT err IO) a }
     deriving ( Functor, Applicative, Monad, MonadIO, MonadError err
              , MonadState (Note SHA1 T.Text))
+
+
 
 emptyNoteS :: NoteS err ()
 emptyNoteS = put newNote 
  
 runNoteS :: NoteS err a-> Note' -> IO (Either err (a, Note'))
-runNoteS = (runEitherT .) . runStateT . getNoteS
+runNoteS = (runEitherT .) . runStateT . _getNoteS
 
 runWith' m s = runNoteS m s
 
@@ -117,7 +126,6 @@ hasLen' xs n =
            else Left $ "expected argument list of length " ++ show n
                        ++ "but instead received one of length " 
                        ++ show (length xs)
-
 
 data ServiceTypes alg = Blob' T.Text
               | Span' (AesonKey alg) Selection
@@ -289,21 +297,21 @@ loadf st = do
 lsvm :: NoteS String ST
 lsvm = do
     note <- get
-    let s = show' $ getVMap note
+    let s = show' $ _getVMap note
     put note
     return . Ls $  T.pack s
 
 lslnk :: NoteS String ST
 lslnk = do
     note <- get
-    let s = pshow $ getLinks note
+    let s = pshow $ _getLinks note
     put note
     return . Ls $ T.pack s
 
 lsabbr :: NoteS String ST
 lsabbr = do
     note <- get
-    let s = show $ getAbbrev note
+    let s = show $ _getAbbrev note
     put note
     return . Ls $ T.pack s
 
@@ -326,14 +334,14 @@ abbr st = do
 vmkeys :: NoteS String ST
 vmkeys = do
     note <- get
-    let x = appVM M.keys $ getVMap note
+    let x = appVM M.keys $ _getVMap note
     put note
     return . List $ map (Key' . toAesonKey) x
 
 abbrkeys :: NoteS String ST
 abbrkeys = do
     note <- get
-    let x = getAbbrKeys $ getAbbrev note
+    let x = getAbbrKeys $ _getAbbrev note
     put note
     return . List $ map Abbr x
 
@@ -343,10 +351,10 @@ isPointedToBy st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     obj <- liftEither $ 
-        case A.lengthen (getAbbrev note) abbr of
+        case A.lengthen (_getAbbrev note) abbr of
           Just k -> Right $ Obj k
           Nothing -> Left "could not find key matching abbr"
-    let subjs =  Lnk.isPointedToBy (getLinks note) obj
+    let subjs =  Lnk.isPointedToBy (_getLinks note) obj
     put note
     return . List $ map (\(Subj k) -> Abbr . take' 8 $ keyToText k) subjs
 
@@ -356,7 +364,7 @@ isPointedToByK st = do
     note <- get
     key <- liftEither $ getKey st
     let obj = Obj key
-        subjs =  Lnk.isPointedToBy (getLinks note) obj
+        subjs =  Lnk.isPointedToBy (_getLinks note) obj
     put note
     return . List $ map (\(Subj k) -> Key' . toAesonKey $ k) subjs
 
@@ -366,10 +374,10 @@ pointsTo st = do
     note <- get
     abbr <- liftEither $ getAbbr st
     subj <- liftEither $ 
-        case A.lengthen (getAbbrev note) abbr of
+        case A.lengthen (_getAbbrev note) abbr of
           Just k -> Right $ Subj k
           Nothing -> Left "could not find key matching abbr"
-    let objs =  Lnk.pointsTo (getLinks note) subj
+    let objs =  Lnk.pointsTo (_getLinks note) subj
     put note
     return . List $ map (\(Obj k) -> Abbr 
                                    . T.pack 
@@ -380,7 +388,7 @@ pointsToK st = do
     note <- get
     key <- liftEither $ getKey st
     let subj = Subj key
-        objs =  Lnk.pointsTo (getLinks note) subj
+        objs =  Lnk.pointsTo (_getLinks note) subj
     put note
     return . List $ map (\(Obj k) -> Key' . toAesonKey $ k) objs
 
@@ -516,3 +524,6 @@ getTwo xs
 
 pbits :: PrintfType r => r
 pbits =  printf "%b\n"
+
+-- Why will this only compile when preceding EOF?
+makeLenses ''NoteS
