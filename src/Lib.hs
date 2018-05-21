@@ -42,6 +42,7 @@ import Data.Monoid ((<>))
 import Note (Note(..), newNote, ls)
 import qualified Note
 import UI.Types (NoteS, runWith', keyToText, derefAbbr, Note')
+import qualified UI.Types as Types
 import UI.Vi
 import Abbrev 
 import VMap hiding (deref, getSpansOf)
@@ -51,14 +52,18 @@ import qualified Link as Lnk
 import Select hiding (Start, End)
 import Val
 
-type MonadNote m = ( Monad m
-                   , MonadIO m
-                   , MonadState Note' m
-                   , MonadError String m
-                   )
 
+type MonadNote m = Types.MonadNote Note' String m
 runWith = runWith'
+
+
 run = runWith'
+
+--run' :: (Monad m, MonadIO m)
+--     => NoteS String a -> Note' -> m a
+run' noteS state = 
+    do e <- liftIO $ runWith' noteS state 
+       return $ e
 
 go' state = run (state *> ls') newNote
 go_ state = void $ run (state *> ls') newNote
@@ -76,6 +81,13 @@ ls' = do n <- get
                               <*> [n]
          put n
          return ()
+
+lsAll :: MonadNote m => m T.Text
+lsAll = T.intercalate "\n" <$> sequence [ lsvm
+                                        , lsabbr
+                                        , lslnk
+                                        , lssm
+                                        ]
 
 paper = loadf' "mock/paper3.md" "paper"
 
@@ -268,6 +280,14 @@ lsabbr :: MonadNote m => m T.Text
 lsabbr = do
     note <- get
     let s = show $ _getAbbrev note
+    put note
+    return $ T.pack s
+
+-- | Pretty print the state's 'SelVMap'.
+lssm :: MonadNote m => m T.Text
+lssm = do
+    note <- get
+    let s = show $ _getSelVMap note
     put note
     return $ T.pack s
 

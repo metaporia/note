@@ -71,34 +71,35 @@ library:
   ghc-options: []
 
 
+#executables:
+#  note-tui:
+#    main:               Main.hs
+#    source-dirs:        app/tui
+#    ghc-options:
+#    - -threaded
+#    - -rtsopts
+#    - -with-rtsopts=-N
+#    dependencies:
+#    - note
+#    - brick
+#    - vty
+#
+#  note-serve:
+#    main:                Main.hs
+#    source-dirs:         app/serve
+#    ghc-options:
+#    - -threaded
+#    - -rtsopts
+#    - -with-rtsopts=-N
+#    dependencies:
+#        - note
+#  note-repl :
+#    main:                Main.hs
+#    source-dirs:         app/repl
+#    dependencies:
+#        - note
+#        - aeson
 executables:
-  note-tui:
-    main:               Main.hs
-    source-dirs:        app/tui
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - note
-    - brick
-    - vty
-
-  note-serve:
-    main:                Main.hs
-    source-dirs:         app/serve
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-        - note
-  note-repl :
-    main:                Main.hs
-    source-dirs:         app/repl
-    dependencies:
-        - note
-        - aeson
   note-web:
     main:             Main.hs
     source-dirs:      app/web
@@ -110,6 +111,10 @@ executables:
     - note
     - time
     - yesod
+    - stm
+    - shakespeare
+    - blaze-html
+    - markdown
 
 tests:
   note-test:

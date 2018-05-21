@@ -1,0 +1,100 @@
+**Dereference Key Alias**
+----
+
+Dereferences an alias to a content key (SHA1), returns defaultDerefTemplate
+with key, and content value each within a separate paragraph.
+
+
+* **URL**
+
+  /deref/#Alias
+
+* **Method:**
+
+  `GET`
+  
+*  **URL Params**
+
+   **Required:**
+ 
+   `Alias ~ String | Text`
+
+* **Data Params**
+
+  None
+
+* **Success Response:**
+
+  * **Code:** 200 <br />
+    **Content:** 
+    ```
+    <h1>DefaultDerefTemplate</h1> <p>resp</p>
+    <p>eureka!
+    </p>
+    ```
+
+
+* **Error Response:**
+
+  * **Code:** 404 <br />
+    **Content:** 
+    ```
+    <h1>DefaultDerefTemplate</h1>
+    <p>eau</p>
+    <p>abbr not found in Abbrev
+    </p>
+    ```
+
+    
+* **Sample Call:**
+
+  ```bash
+  curl http::/localhost:3000/deref/spec
+    
+  ```
+
+* **NB:**
+
+    * an `Alias` is just `Text`.
+    * for a list of `Alias`es see `/ls`
+
+
+**List  `Note` State**
+---
+
+Dump plain text description of application state (basically, pretty print *all*
+of the B-Trees.
+
+* **URL**
+
+  /ls
+
+* **Method:**
+
+    `GET`
+  
+*  **URL Params**
+
+    None
+
+* **Data Params**
+
+    None
+
+* **Success Response:**
+
+  * **Code:** 200 <br />
+    TODO
+
+* **Error Response:**
+
+  * **Code:** 200 <br />
+    TODO
+    
+* **Sample Call:**
+
+  ```bash
+  curl http::/localhost:3000/ls
+    
+  ```
+

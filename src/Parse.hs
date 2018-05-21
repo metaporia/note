@@ -27,6 +27,7 @@ import Val
 import Select
 import UI.Types (NoteS(..))
 import Select (Selection(..))
+import Note (newNote)
 
 
 -- '*.note' format: 
@@ -203,6 +204,7 @@ r1 = [ ( "sparked enormous controversy over the price hike.  People, outraged, \
 sr = fst $ r0 !! 0
 sr' = fst  $ r0 !! 2
 
+r3 :: NoteS String (Key SHA1, [LineTag])
 r3 = loadK sr  >>= selectK (Sel 69 75)
      -- >> loadK sr' >>= (\k -> selectK k (Sel 52 57)) 
      >>= lookupK
@@ -234,7 +236,9 @@ conv0 = [ ("hello world", "p^" )
 conv1 :: [(T.Text, [LineTag])]
 conv1 = [ ("hello world", [Partial 6 11 '^'])]
 
+conv2 :: NoteS String (Key SHA1)
 conv2 = loadK "hello world" >>= selectK (Sel 6 11)
+
 -- and back again
 undoConv2 = conv2 
         >>= lookupK 
@@ -393,6 +397,7 @@ xx = loadK s                  >>= aliasK "bg"
  >> link "humble" "new"
  >> lengthen' "bg"
 
+xy :: NoteS String (Key SHA1)
 xy = loadf "mock/specificity.md" >>= aliasK "spec"
   >> loadK "eureka!"             >>= aliasK "resp"
   >> select (Sel 50 1000) "spec" >>= aliasK "selection"
@@ -400,6 +405,12 @@ xy = loadf "mock/specificity.md" >>= aliasK "spec"
   >> select (Sel 105 130) "spec"   >>= aliasK "selection2"
   >> link "resp" "selection2"
   >> lengthen' "spec"
+
+note'' = do x <- run xy newNote
+            let t = case x of
+                      Right (_, n') -> ("success!", n')
+                      Left err -> (T.pack err, newNote)
+            return t
 
 ret' n = do e <- go n
             let (r, n) = fromRight e

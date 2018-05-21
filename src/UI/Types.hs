@@ -3,6 +3,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 module UI.Types where
 import Prelude hiding (insert, lookup, init)
 
@@ -83,6 +85,12 @@ type ST = ServiceTypes SHA1
 newtype NoteS err a = NoteS { _getNoteS :: StateT Note' (EitherT err IO) a }
     deriving ( Functor, Applicative, Monad, MonadIO, MonadError err
              , MonadState (Note SHA1 T.Text))
+
+type MonadNote s err m = ( Monad m
+                   , MonadIO m
+                   , MonadState s m
+                   , MonadError err m
+                   )
 
 
 
