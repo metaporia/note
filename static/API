@@ -1,4 +1,4 @@
-**Dereference Key Alias**
+**Dereference Key Alias**<a name="deref"></a>
 ----
 
 Dereferences an alias to a content key (SHA1), returns defaultDerefTemplate
@@ -39,10 +39,10 @@ with key, and content value each within a separate paragraph.
   * **Code:** 404 <br />
     **Content:** 
     ```
-    <h1>DefaultDerefTemplate</h1>
-    <p>eau</p>
-    <p>abbr not found in Abbrev
-    </p>
+	<!DOCTYPE html>
+	<html><head><title>Not Found</title></head><body><h1>Not Found</h1>
+	<p>/deref</p>
+	</body></html>
     ```
 
     
@@ -59,7 +59,7 @@ with key, and content value each within a separate paragraph.
     * for a list of `Alias`es see `/ls`
 
 
-**List  `Note` State**
+**List  `Note` State**<a name="ls"></a>
 ---
 
 Dump plain text description of application state (basically, pretty print *all*
@@ -98,3 +98,4 @@ of the B-Trees.
     
   ```
 
+[Index](./static/index.html)

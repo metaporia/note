@@ -1,0 +1,14 @@
+$doctype 5
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="/static/styles.css" >
+        <title> Dereferenceable key abbreviation links, now w previews!
+    <body>
+        <table>
+            <tr>
+                <th>abbrev
+                <th>preview
+            $forall (abbr, prev) <- previews
+                <tr>
+                    <td>#{abbr}
+                    <td>#{prev}

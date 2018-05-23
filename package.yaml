@@ -111,6 +111,7 @@ executables:
     - note
     - time
     - yesod
+    - yesod-static
     - stm
     - shakespeare
     - blaze-html
